@@ -1,4 +1,4 @@
-# Data Scientist
+# Strategic Planner | Product Enthusiast | Data Enthusiast
 
 #### Technical Skills: Python, SQL, AWS, Snowflake, MATLAB
 
