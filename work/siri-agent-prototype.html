@@ -1,0 +1,723 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Siri Agent Concept</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: studio canvas. Left rail = scenarios, centre = live phone, right rail = live state. Second view = screens board. */
+:root{
+  --bg:#eef0f6; --panel:#ffffff; --ink:#141622; --muted:#5d6377; --line:#dfe2ec;
+  --accent:#4f46e5; --accent-2:#e2557a; --accent-3:#14a3a3; --accent-soft:#eceafe;
+  --scr:#f6f7fb; --scr-ink:#12131b; --scr-muted:#6a6f82; --card:#ffffff; --bubble:#e9ebf3; --hair:#e3e5ee;
+  --t0:#23885a; --t1:#2a6bd1; --t2:#b9800f; --t3:#d23c66; --bad:#c23a2e; --good:#23885a;
+  --display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif; --body:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --shadow:0 30px 60px -20px rgba(30,30,70,.35);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c0d13; --panel:#161821; --ink:#eceef7; --muted:#a0a6ba; --line:#272a37;
+  --accent:#8b83ff; --accent-2:#ff7a9c; --accent-3:#3fd0cf; --accent-soft:#232048;
+  --scr:#0f1017; --scr-ink:#f1f2f8; --scr-muted:#9aa0b5; --card:#1a1c26; --bubble:#232634; --hair:#2a2d3b;
+  --t0:#4cc283; --t1:#6aa3ff; --t2:#e7b04a; --t3:#ff6f96; --bad:#ff6b5e; --good:#4cc283;
+  --shadow:0 30px 60px -20px rgba(0,0,0,.7); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c0d13; --panel:#161821; --ink:#eceef7; --muted:#a0a6ba; --line:#272a37;
+  --accent:#8b83ff; --accent-2:#ff7a9c; --accent-3:#3fd0cf; --accent-soft:#232048;
+  --scr:#0f1017; --scr-ink:#f1f2f8; --scr-muted:#9aa0b5; --card:#1a1c26; --bubble:#232634; --hair:#2a2d3b;
+  --t0:#4cc283; --t1:#6aa3ff; --t2:#e7b04a; --t3:#ff6f96; --bad:#ff6b5e; --good:#4cc283;
+  --shadow:0 30px 60px -20px rgba(0,0,0,.7); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.top{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center}
+.brand{display:flex;gap:12px;align-items:center}
+.mark{width:40px;height:40px;border-radius:12px;background:conic-gradient(from 200deg,var(--accent),var(--accent-2),#f6a23b,var(--accent-3),var(--accent));display:grid;place-items:center}
+.mark i{width:16px;height:16px;border-radius:50%;background:var(--panel);display:block}
+.brand h1{font-size:22px;letter-spacing:-.01em}
+.brand p{margin:0;color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px}
+.tabs a{padding:7px 14px;border-radius:999px;text-decoration:none;color:var(--muted);font-weight:600;font-size:13px}
+.tabs a[aria-current="page"]{background:var(--ink);color:var(--panel)}
+.note{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.stage{display:grid;grid-template-columns:270px minmax(0,1fr) 290px;gap:20px;align-items:start}
+@media (max-width:1060px){.stage{grid-template-columns:1fr}.phone-col{order:-1}}
+.rail{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.rail h2{font-size:15px}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.scen{all:unset;cursor:pointer;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px}
+.scen:hover{border-color:var(--accent)}
+.scen:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.scen .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;color:#fff}
+.scen b{display:block;font-size:13.5px}
+.scen span{font-size:12px;color:var(--muted);display:block}
+.scen q{display:block;font-size:12px;color:var(--ink);margin-top:3px;quotes:"\201C" "\201D"}
+.ghostbtn{all:unset;cursor:pointer;text-align:center;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-weight:600;font-size:13px}
+.ghostbtn:hover{border-color:var(--ink)}
+.kv{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:var(--muted)}
+.pill{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap;letter-spacing:.02em}
+.pill.paid{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pill.due{background:color-mix(in srgb,var(--t2) 18%,transparent);color:var(--t2)}
+.meter{height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
+.legend{display:grid;gap:7px;font-size:12.5px}
+.legend div{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:start}
+.legend .eyebrow{display:block}
+.tier{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;border:1.5px solid currentColor;text-align:center;line-height:1.5}
+.T0{color:var(--t0)}.T1{color:var(--t1)}.T2{color:var(--t2)}.T3{color:var(--t3)}
+
+/* Phone */
+.phone-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+.device{width:372px;max-width:100%;aspect-ratio:372/790;background:#0a0a0d;border-radius:56px;padding:11px;box-shadow:var(--shadow),inset 0 0 0 2px #2b2c33;position:relative}
+.screen{position:relative;height:100%;border-radius:46px;overflow:hidden;background:var(--scr);color:var(--scr-ink);display:flex;flex-direction:column;container-type:inline-size}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;font-weight:600;font-size:14px;height:50px;font-variant-numeric:tabular-nums;position:relative;z-index:5}
+.sbar .r{display:flex;gap:6px;align-items:center;font-size:12px}
+.batt{width:24px;height:11px;border:1.5px solid currentColor;border-radius:3px;padding:1px;opacity:.9}
+.batt i{display:block;height:100%;width:78%;background:currentColor;border-radius:1px}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);min-width:108px;height:32px;border-radius:20px;background:#000;color:#fff;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;transition:min-width .3s}
+.island.wide{min-width:200px}
+.island .ic{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:10px}
+.island .end{all:unset;cursor:pointer;background:#e5484d;border-radius:999px;padding:1px 8px;font-size:11px}
+.island.flash{animation:flash .6s 3}
+.body{flex:1;min-height:0;display:flex;flex-direction:column}
+/* Home */
+.home{flex:1;display:flex;flex-direction:column;padding:8px 18px 18px;gap:14px;background:radial-gradient(120% 60% at 20% 0%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 60%),radial-gradient(90% 50% at 100% 30%,color-mix(in srgb,var(--accent-2) 16%,transparent),transparent 60%),var(--scr)}
+.clock{text-align:center;margin-top:6px}
+.clock small{display:block;font-size:14px;font-weight:600;color:var(--scr-muted)}
+.clock b{font-family:var(--display);font-size:64px;line-height:1;font-weight:600;letter-spacing:-.02em}
+.widget{all:unset;cursor:pointer;display:block;background:color-mix(in srgb,var(--card) 82%,transparent);backdrop-filter:blur(12px);border:1px solid var(--hair);border-radius:22px;padding:14px}
+.widget .wh{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--scr-muted);text-transform:uppercase;letter-spacing:.06em}
+.orbmini{width:16px;height:16px;border-radius:50%;background:conic-gradient(var(--accent),var(--accent-2),#f6a23b,var(--accent-3),var(--accent))}
+.widget .wl{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin-top:8px;font-size:13.5px}
+.widget .wl span:nth-child(even){color:var(--scr-muted);font-variant-numeric:tabular-nums;text-align:right}
+.apps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 8px;margin-top:4px}
+.app{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;font-weight:500}
+.app .ico{width:56px;height:56px;border-radius:15px;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.app .ico svg{width:28px;height:28px}
+.badge{position:relative}
+.badge em{position:absolute;top:-5px;right:-5px;background:#e5484d;color:#fff;font-style:normal;font-size:11px;font-weight:700;border-radius:999px;min-width:20px;height:20px;display:grid;place-items:center;padding:0 5px}
+.dock{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:12px;background:color-mix(in srgb,var(--card) 70%,transparent);backdrop-filter:blur(12px);border:1px solid var(--hair);border-radius:28px;padding:10px}
+.talk{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;padding:4px 14px 4px 4px}
+.orb{width:44px;height:44px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--accent-2),#f6a23b,var(--accent-3),var(--accent));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+/* Siri */
+.siri{flex:1;min-height:0;display:flex;flex-direction:column;position:relative}
+.glow{position:absolute;inset:0;border-radius:46px;pointer-events:none;padding:3px;background:conic-gradient(from var(--a,0deg),var(--accent),var(--accent-2),#f6a23b,var(--accent-3),var(--accent));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.85;z-index:4}
+.listening .glow{animation:breathe 1.2s ease-in-out infinite}
+.shead{display:flex;justify-content:space-between;align-items:center;padding:4px 16px 6px}
+.shead b{font-family:var(--display);font-size:17px;display:flex;gap:8px;align-items:center}
+.iconbtn{all:unset;cursor:pointer;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--bubble);font-size:14px}
+.feed{flex:1;min-height:0;overflow-y:auto;padding:6px 12px 10px;display:flex;flex-direction:column;gap:9px;scroll-behavior:smooth}
+.m{max-width:86%;padding:8px 12px;border-radius:18px;font-size:13.5px;line-height:1.42}
+.m.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:6px}
+.m.ai{align-self:flex-start;background:var(--bubble);border-bottom-left-radius:6px}
+.sys{align-self:center;font-size:11.5px;color:var(--scr-muted);background:var(--bubble);border-radius:999px;padding:3px 10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{all:unset;cursor:pointer;font-size:12.5px;font-weight:600;border:1px solid var(--hair);background:var(--card);border-radius:999px;padding:6px 11px}
+.chip:hover{border-color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--hair);border-radius:20px;padding:12px;align-self:stretch;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.card h3{font-size:14px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.card .sub{font-size:11.5px;color:var(--scr-muted);margin:2px 0 6px}
+.st{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:start;padding:7px 0;border-top:1px solid var(--hair);font-size:12.5px}
+.st:first-of-type{border-top:0}
+.st small{display:block;color:var(--scr-muted);font-size:11.5px;line-height:1.35}
+.st .note{display:block;color:var(--t2);font-size:11.5px;text-transform:none;letter-spacing:0}
+.st.blocked .note{color:var(--bad)}
+.dot{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--hair);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--scr-muted)}
+.st.run .dot{border-color:var(--accent);border-top-color:transparent;animation:spin .8s linear infinite}
+.st.done .dot{background:var(--good);border-color:var(--good);color:#fff}
+.st.blocked .dot{background:var(--bad);border-color:var(--bad);color:#fff}
+.st.fallback .dot{background:var(--t2);border-color:var(--t2);color:#fff}
+.st.skipped{opacity:.5}.st.skipped .lbl{text-decoration:line-through}
+.st input[type=checkbox]{width:18px;height:18px;margin:1px 0 0;accent-color:var(--accent)}
+.amt{width:80px;border:1px solid var(--hair);background:var(--scr);color:var(--scr-ink);border-radius:8px;padding:3px 6px;font:inherit;font-size:12px;font-variant-numeric:tabular-nums}
+.row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.btn{all:unset;cursor:pointer;font-weight:600;font-size:13px;padding:8px 14px;border-radius:999px;background:var(--accent);color:#fff;text-align:center}
+.btn.alt{background:var(--bubble);color:var(--scr-ink)}
+.btn.danger{background:var(--bad)}
+.btn[aria-disabled="true"]{opacity:.4;pointer-events:none}
+.btn.wide{flex:1}
+.status-line{font-size:11.5px;color:var(--scr-muted);margin-top:6px;display:flex;align-items:center;gap:6px}
+.receipt .tot{display:flex;justify-content:space-between;font-weight:700;padding-top:6px;margin-top:4px;border-top:1px dashed var(--hair);font-variant-numeric:tabular-nums}
+.receipt .ln{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:3px 0;font-variant-numeric:tabular-nums}
+.check{width:26px;height:26px;border-radius:50%;background:var(--good);color:#fff;display:grid;place-items:center;font-size:14px}
+.composer{padding:8px 12px 22px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--hair);background:var(--scr);position:relative;z-index:5}
+.cap{font-size:13px;color:var(--scr-muted);min-height:18px;padding:0 6px}
+.cap b{color:var(--scr-ink);font-weight:600}
+.cin{display:flex;gap:8px;align-items:center}
+.cin input{flex:1;min-width:0;border:1px solid var(--hair);background:var(--card);color:var(--scr-ink);border-radius:999px;padding:10px 14px;font:inherit;font-size:13.5px}
+.mic{all:unset;cursor:pointer;width:42px;height:42px;border-radius:50%;flex:none;display:grid;place-items:center;background:conic-gradient(from 0deg,var(--accent),var(--accent-2),#f6a23b,var(--accent-3),var(--accent))}
+.mic svg{width:18px;height:18px;color:#fff}
+.wave{display:flex;gap:3px;align-items:center;height:18px}
+.wave i{width:3px;border-radius:2px;background:var(--accent);animation:wave .9s ease-in-out infinite}
+.wave i:nth-child(2){animation-delay:.1s}.wave i:nth-child(3){animation-delay:.2s}.wave i:nth-child(4){animation-delay:.3s}.wave i:nth-child(5){animation-delay:.4s}
+/* App screens */
+.appv{flex:1;min-height:0;display:flex;flex-direction:column}
+.appbar{display:flex;align-items:center;justify-content:space-between;padding:4px 14px 8px}
+.back{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:14px}
+.appbar h2{font-size:18px}
+.list{flex:1;min-height:0;overflow-y:auto;padding:0 14px 20px;display:flex;flex-direction:column;gap:8px}
+.li{background:var(--card);border:1px solid var(--hair);border-radius:16px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:3px}
+.li .h{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:600}
+.li small{color:var(--scr-muted);font-size:12px}
+.li.undone{opacity:.55}.li.undone .h span:first-child{text-decoration:line-through}
+.lnk{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:12.5px}
+.bal{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:2px}
+.bal b{font-family:var(--display);font-size:30px;font-variant-numeric:tabular-nums}
+.set{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.set input[type=range]{width:100%;accent-color:var(--accent)}
+.sw{all:unset;cursor:pointer;width:46px;height:28px;border-radius:999px;background:var(--hair);position:relative;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s}
+.sw[aria-checked="true"]{background:var(--good)}
+.sw[aria-checked="true"]::after{left:21px}
+.sel{border:1px solid var(--hair);background:var(--scr);color:var(--scr-ink);border-radius:8px;padding:4px 6px;font:inherit;font-size:12.5px}
+.sms{background:var(--bubble);border-radius:16px;padding:10px 12px;font-size:13px}
+/* Sheet */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:7;display:flex;align-items:flex-end}
+.sheet{width:100%;background:var(--card);border-radius:30px 30px 44px 44px;padding:18px 18px 26px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;animation:up .25s ease-out}
+.sheet .big{font-family:var(--display);font-size:36px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.sheet .to{font-size:14px}
+.sheet .say{font-size:12px;color:var(--scr-muted);max-width:30ch}
+.fid{width:64px;height:64px;border-radius:18px;border:2.5px solid var(--accent);display:grid;place-items:center;color:var(--accent);margin:4px 0}
+.fid svg{width:34px;height:34px}
+.fid.scan{animation:pulse .7s ease-in-out infinite}
+.fid.ok{border-color:var(--good);color:var(--good)}
+.warn{font-size:12.5px;color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent);border-radius:12px;padding:8px 10px}
+.home-ind{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:120px;height:5px;border-radius:5px;background:var(--scr-ink);opacity:.8;z-index:8}
+.hint{font-size:12px;color:var(--muted);text-align:center;max-width:44ch}
+/* Board */
+.board{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:16px}
+.board-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-end}
+.board-head h2{font-size:24px}
+.board-head p{margin:4px 0 0;color:var(--muted);max-width:70ch}
+.canvas{overflow-x:auto;padding:12px 4px 8px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:18px 18px;border-radius:12px}
+.frames{display:flex;flex-wrap:wrap;justify-content:center;gap:28px 36px;padding:8px}
+.frame{display:flex;flex-direction:column;gap:8px;width:298px}
+.frame .lbl{font-size:12px;font-weight:600;color:var(--muted)}
+.frame .lbl b{color:var(--ink);font-family:var(--display);font-size:14px;display:block}
+.frame .device{width:372px;zoom:.8;pointer-events:none}
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.pr{border:1px solid var(--line);border-radius:14px;padding:14px}
+.pr h3{font-size:14px;margin-bottom:4px}
+.pr p{margin:0;color:var(--muted);font-size:13px}
+footer{color:var(--muted);font-size:12px;text-align:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{50%{opacity:.35}}
+@keyframes wave{0%,100%{height:4px}50%{height:18px}}
+@keyframes pulse{50%{transform:scale(1.06);box-shadow:0 0 0 6px var(--accent-soft)}}
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+@keyframes flash{50%{background:#e5484d}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><div class="mark"><i></i></div><div><h1>Siri Agent</h1><p>A working concept: Siri that plans, asks the right amount of permission, and finishes the job.</p></div></div>
+    <nav class="tabs" aria-label="Views"><a href="#prototype" id="tab-prototype">Prototype</a><a href="#screens" id="tab-screens">Screens board</a></nav>
+  </div>
+
+  <section id="view-prototype">
+    <div class="stage">
+      <aside class="rail">
+        <div><div class="eyebrow">Try a persona</div><h2>Tap a scenario, or type anything</h2></div>
+        <div id="scenarios" style="display:flex;flex-direction:column;gap:8px"></div>
+        <button class="ghostbtn" data-a="reset">Reset demo</button>
+      </aside>
+      <div class="phone-col">
+        <div class="device" id="device"></div>
+        <p class="hint">Everything works: approve or edit plans, confirm payments, undo from Activity, change your spending rules in Settings. Try "set a timer for 1 minute", then "add 2 minutes".</p>
+      </div>
+      <aside class="rail" id="inspector"></aside>
+    </div>
+  </section>
+
+  <section id="view-screens" hidden>
+    <div class="board">
+      <div class="board-head">
+        <div><div class="eyebrow">Design board</div><h2>Siri Agent: key screens</h2><p>Six moments in the flow, from asking to a receipt. Each frame is rendered by the same code as the live prototype, so what you see here is what works.</p></div>
+        <span class="note">Concept · not an Apple product</span>
+      </div>
+      <div class="canvas"><div class="frames" id="frames"></div></div>
+      <div class="principles">
+        <div class="pr"><h3>Show the plan first</h3><p>Every multi-step task starts with a numbered plan, the apps involved and the money at stake.</p></div>
+        <div class="pr"><h3>Permission matches risk</h3><p>Reading runs at once. Reversible actions offer Undo. Sending needs a yes. Money needs Face ID and a spoken amount.</p></div>
+        <div class="pr"><h3>Receipts for everything</h3><p>Every action lands in Activity with time, app and an undo where the app supports one.</p></div>
+        <div class="pr"><h3>Say no on your behalf</h3><p>New payees from texts, urgency and unknown sites are blocked, and a trusted person can be told.</p></div>
+      </div>
+    </div>
+  </section>
+  <footer>Concept prototype for a product thought exercise. Simulated data; names, amounts and apps are examples. Not affiliated with Apple.</footer>
+</div>
+
+<script>
+(() => {
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wait = ms => new Promise(r => setTimeout(r, RM ? Math.min(ms, 60) : ms));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => '$' + n.toFixed(2);
+const hm = m => { const h = Math.floor(m / 60) % 24, mm = m % 60; return ((h + 11) % 12 + 1) + ':' + String(mm).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); };
+const NOW = 7 * 60 + 42;
+const CONTACTS = ['Alice Moore', 'Alice Chen', 'Alex Rivera', 'Ana Morales', 'Dana Kim', 'Karen', 'Mom'];
+
+const fresh = () => ({
+  balance: 612.18,
+  bills: [
+    {id:'pge', payee:'PG&E', full:'Pacific Gas & Electric', amt:87.40, due:'Fri, Nov 13', owner:'me', paid:false, known:true, src:'Email from PG&E, Nov 2'},
+    {id:'metro', payee:'Metro PCS', full:'Metro by T-Mobile', amt:40.00, due:'Sat, Nov 14', owner:'me', paid:false, known:true, src:'Wallet pass'},
+    {id:'water', payee:'City Water', full:'City Water (for Mom)', amt:48.90, due:'Sat, Nov 14', owner:'mom', paid:false, known:true, src:"Mom's shared inbox"}
+  ],
+  events: [
+    {id:'e1', start:570, title:'Team standup', where:'Zoom'},
+    {id:'e2', start:660, title:'1:1 with Dana', where:'Room 4B', contact:'Dana Kim'},
+    {id:'e3', start:900, title:'Kitchen quote, Morales', where:'412 Elm St', contact:'Ana Morales'},
+    {id:'e4', start:1110, title:"Maya's recital", where:'Lincoln High'}
+  ],
+  reminders: [{id:'r0', text:'Pick up dry cleaning', when:'Today, 5:00 PM', done:false}],
+  sent: [],
+  scamSms: {from:'+1 (833) 555-0199', text:'FINAL NOTICE: Your power will be cut in 2 hrs. Pay $389 now at pge-billing-help.co', handled:false},
+  timer: null, call: null,
+  activity: [],
+  settings: {cap:300, spent:0, autoUnder:0, trusted:true, readback:true, driving:false},
+  seq: 1
+});
+let S = fresh();
+let V = {screen:'home', feed:[], sheet:null, listening:false, caption:'', busy:false};
+const undoFns = {};
+let sheetResolve = null;
+
+/* ---------- icons ---------- */
+const I = {
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  wallet:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1.4" fill="currentColor"/></svg>',
+  msg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H9l-5 4z" stroke-linejoin="round"/></svg>',
+  rem:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="7" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="5" cy="17" r="1.5"/><path d="M10 7h10M10 12h10M10 17h10"/></svg>',
+  act:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>',
+  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h4l2 5-3 2a11 11 0 006 6l2-3 5 2v4a2 2 0 01-2 2A17 17 0 013 5a2 2 0 012-2z"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>',
+  send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  face:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 15.5c1.4 1 3.6 1 5 0"/></svg>',
+  timer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="13" r="8"/><path d="M12 9v4M10 2h4"/></svg>'
+};
+
+/* ---------- logging ---------- */
+function log(text, tier, app, undo) {
+  const id = 'a' + (S.seq++);
+  S.activity.unshift({id, text, tier, app, time: hm(NOW + Math.floor((Date.now() - T0) / 60000)), undone:false, undoable: !!undo, note: undo || /^(Blocked|Karen|Saved)/.test(text) ? '' : (tier >= 2 ? (tier === 3 ? 'Payments are final. Dispute from Wallet.' : 'Sent. Messages cannot be unsent.') : '')});
+  if (undo) undoFns[id] = undo;
+}
+const T0 = Date.now();
+
+/* ---------- parsing ---------- */
+function findContact(q) {
+  const ql = q.toLowerCase();
+  const exact = CONTACTS.filter(c => ql.includes(c.toLowerCase()));
+  if (exact.length) return exact.sort((a, b) => b.length - a.length).slice(0, 1);
+  const first = CONTACTS.filter(c => new RegExp('\\b' + c.split(' ')[0].toLowerCase() + '\\b').test(ql));
+  return first;
+}
+function parseMinutes(q, dflt) {
+  const m = q.match(/(\d+)\s*(h|hr|hour|hours|m|min|mins|minute|minutes|s|sec|secs|second|seconds)\b/i);
+  if (!m) { const w = q.match(/\b(a|an|one|half an?)\s+(hour|minute)/i); if (w) return /half/i.test(w[1]) ? 30 * 60 : (/hour/i.test(w[2]) ? 3600 : 60); return dflt; }
+  const n = +m[1], u = m[2].toLowerCase();
+  return u.startsWith('h') ? n * 3600 : u.startsWith('s') ? n : n * 60;
+}
+function intent(q) {
+  const t = q.toLowerCase();
+  if (/\b(cancel|stop)\b.*timer/.test(t)) return {k:'timer-cancel'};
+  if (/\b(add|extend|plus)\b.*\d/.test(t) && S.timer) return {k:'timer-add', secs: parseMinutes(t, 60)};
+  if (/timer/.test(t)) return {k:'timer', secs: parseMinutes(t, 300)};
+  if (/remind me/.test(t)) return {k:'remind'};
+  if (/(text|got|sms|message).*(pay|bill|power|final)|final notice|is this (text )?(a )?scam|scam/.test(t)) return {k:'scam'};
+  if (/tell karen|alert karen/.test(t)) return {k:'scam-tell'};
+  if (/report (it )?(as )?junk|report the number/.test(t)) return {k:'scam-junk'};
+  if (/(mom|mother|mum)('s)?\b.*bill|pay.*(mom|mother|mum)/.test(t)) return {k:'care'};
+  if (/\bpay\b|bills?\b.*due|due.*bills?/.test(t)) {
+    const which = S.bills.filter(b => b.owner === 'me' && (t.includes(b.payee.toLowerCase()) || t.includes(b.id) || (b.id === 'pge' && /pg ?& ?e|pge|electric/.test(t)) || (b.id === 'metro' && /metro|phone bill/.test(t))));
+    return {k:'bills', only: which.map(b => b.id)};
+  }
+  if (/\b(late|move|reschedule|push)\b/.test(t)) return {k:'move', mins: Math.round(parseMinutes(t, 1800) / 60)};
+  if (/^(call|ring|phone|facetime)\b|\bcall\b/.test(t)) return {k:'call', who: findContact(t)};
+  if (/^(text|message|tell)\b/.test(t)) return {k:'text', who: findContact(t), body: (q.match(/\b(?:that|saying|say)\b\s+(.+)/i) || [])[1]};
+  if (/rundown|my day|today|morning|brief|what.*(up|on)/.test(t)) return {k:'rundown'};
+  if (/help|what can you/.test(t)) return {k:'help'};
+  return {k:'unknown'};
+}
+
+/* ---------- plan builders ---------- */
+function stepsFor(it) {
+  const s = S;
+  if (it.k === 'rundown') {
+    const evs = s.events.filter(e => e.start >= NOW);
+    const due = s.bills.filter(b => b.owner === 'me' && !b.paid);
+    const steps = [
+      {t:0, app:'Calendar', label:`Read today's ${evs.length} events`, detail: evs.slice(0,3).map(e => hm(e.start).replace(':00','') + ' ' + e.title).join(' · ')},
+      {t:0, app:'Mail + Wallet', label:'Find bills due this week', detail: due.length ? due.map(b => b.payee + ' ' + money(b.amt) + ' due ' + b.due.split(',')[0]).join(' · ') : 'Nothing due'},
+      {t:0, app:'Messages', label:'Check for anything urgent', detail: s.scamSms.handled ? 'Nothing urgent' : '1 suspicious text about your power bill'}
+    ];
+    if (due.length && !s.reminders.some(r => r.auto)) steps.push({t:1, app:'Reminders', label:`Remind me to pay ${due[0].payee} Thu 8 PM`, detail:'Undo available', run: () => { const r = {id:'r'+s.seq, text:'Pay ' + due[0].payee + ' (' + money(due[0].amt) + ')', when:'Thu, 8:00 PM', done:false, auto:true}; s.reminders.push(r); log('Added reminder: ' + r.text, 1, 'Reminders', () => { s.reminders = s.reminders.filter(x => x !== r); }); }});
+    return {title:"Today's rundown", intro:'Reading your day. Read-only, so I will just do it.', steps, outro: () => {
+      const n = evs[0];
+      let txt = `You have ${evs.length} things today. First is ${n.title} at ${hm(n.start)}. `;
+      txt += due.length ? `${due.length} bill${due.length>1?'s':''} due this week, ${money(due.reduce((a,b)=>a+b.amt,0))} in total. ` : 'No bills due this week. ';
+      if (!s.scamSms.handled) txt += 'Also, a text claims your power will be cut. It looks like a scam, so do not pay it.';
+      return {text: txt, chips: [due.length ? 'Pay my bills due this week' : null, !s.scamSms.handled ? 'Is the text I got a scam?' : null, "I'm running 30 minutes late for my 3 o'clock"].filter(Boolean)};
+    }};
+  }
+  if (it.k === 'bills') {
+    let due = s.bills.filter(b => b.owner === 'me' && !b.paid);
+    if (it.only && it.only.length) due = due.filter(b => it.only.includes(b.id));
+    if (!due.length) return {none: it.only && it.only.length ? 'That bill is already paid. Your receipt is in Activity.' : 'You have no unpaid bills due this week.'};
+    const total = due.reduce((a, b) => a + b.amt, 0);
+    const steps = [
+      {t:0, app:'Mail + Wallet', label:`Find ${due.length > 1 ? 'bills' : 'the bill'} due`, detail: due.map(b => b.payee + ' ' + money(b.amt) + ' · ' + b.src).join(' · ')},
+      {t:0, app:'Wallet', label:'Check balance on Debit •4417', detail: money(s.balance) + ' available' + (s.balance >= total ? ', enough' : ', not enough')}
+    ];
+    due.forEach(b => steps.push({t:3, app:'Pay', label:`Pay ${b.payee}`, amt:b.amt, payee:b.full, known:b.known, editable:true, detail:'Known payee · from Debit •4417', run: st => { b.paid = true; s.balance -= st.amt; s.settings.spent += st.amt; log(`Paid ${b.full} ${money(st.amt)}`, 3, 'Wallet'); return {receipt:[b.full, st.amt]}; }}));
+    steps.push({t:1, app:'Reminders', label:"Remind me before next month's bills", detail:'Dec 10 · Undo available', run: () => { const r = {id:'r'+s.seq, text:'Check bills for December', when:'Dec 10, 9:00 AM', done:false}; s.reminders.push(r); log('Added reminder: ' + r.text, 1, 'Reminders', () => { s.reminders = s.reminders.filter(x => x !== r); }); }});
+    return {title:'Pay bills', intro: `I found ${due.length} bill${due.length>1?'s':''}. ${due.length>1?'Both payees are':'The payee is'} ones you have paid before.`, steps, receipt:true, outro: p => {
+      const paid = p.steps.filter(x => x.t === 3 && x.status === 'done');
+      if (!paid.length) return {text:'Nothing was paid. Say "pay my bills" when you are ready.'};
+      return {text:`Paid ${paid.map(x => x.label.replace('Pay ','') + ' ' + money(x.amt)).join(' and ')}. You have ${money(s.balance)} left on Debit •4417.`};
+    }};
+  }
+  if (it.k === 'care') {
+    const b = s.bills.find(x => x.id === 'water');
+    if (b.paid) return {none:"Mom's water bill is already paid. It's in both of your Activity logs."};
+    return {title:"Pay Mom's bill", intro:'You are a delegate on Mom\'s account for utilities up to $150. She will see this too.', receipt:true, steps:[
+      {t:0, app:'Delegates', label:'Check your permission for Mom', detail:'Utilities, up to $150, granted Aug 2026'},
+      {t:0, app:'Mail', label:"Find the bill in Mom's shared inbox", detail:`City Water ${money(b.amt)} due ${b.due}`},
+      {t:3, app:'Pay', label:'Pay City Water from Mom\'s card', amt:b.amt, payee:b.full, known:true, editable:true, detail:"Mom's Visa •2208", run: st => { b.paid = true; log(`Paid City Water ${money(st.amt)} for Mom`, 3, 'Wallet'); return {receipt:[b.full, st.amt]}; }},
+      {t:2, app:'Messages', label:'Tell Mom, in Vietnamese', detail:'"Con đã trả hóa đơn nước cho mẹ rồi."', run: () => { s.sent.push({to:'Mom', text:'Con đã trả hóa đơn nước cho mẹ rồi.'}); log('Texted Mom about the water bill', 2, 'Messages'); }}
+    ], outro: () => ({text:`Paid City Water ${money(b.amt)} from Mom's card and told her in Vietnamese. It is logged on both accounts.`})};
+  }
+  if (it.k === 'move') {
+    const e = s.events.find(x => x.id === 'e3');
+    const old = e.start, mins = it.mins || 30;
+    const steps = [
+      {t:0, app:'Calendar', label:`Find ${hm(e.start)} "${e.title}"`, detail:e.where},
+      {t:1, app:'Calendar', label:`Move it to ${hm(e.start + mins)}`, detail:'No conflicts · Undo available', run: () => { e.start = old + mins; log(`Moved "${e.title}" to ${hm(e.start)}`, 1, 'Calendar', () => { e.start = old; }); }},
+      {t:2, app:'Messages', label:`Text ${e.contact}`, detail:`"Running about ${mins} min late, see you at ${hm(old + mins)}."`, run: () => { s.sent.push({to:e.contact, text:`Running about ${mins} min late, see you at ${hm(old + mins)}.`}); log(`Texted ${e.contact}: running late`, 2, 'Messages'); }},
+      {t:1, app:'Jobber', label:'Update the job time in Jobber', detail:'Third-party app', run: () => ({status:'fallback', note:'Jobber has no Siri action yet. I saved it and will open Jobber at this job when you park.'})}
+    ];
+    return {title:'Reschedule', intro: s.settings.driving ? 'You are driving, so I will read each step aloud. Say "yes" to approve.' : 'Here is the plan.', steps, outro: () => ({text:`Moved to ${hm(e.start)} and texted ${e.contact}. Jobber does not support Siri yet, so I will open it at the job screen when you park.`})};
+  }
+  if (it.k === 'scam') {
+    const pge = s.bills.find(x => x.id === 'pge');
+    return {title:'Check payment request', intro:'Something looks wrong with this. Here is what I checked.', steps:[
+      {t:0, app:'Messages', label:`Read the text from ${s.scamSms.from}`, detail:'"' + s.scamSms.text + '"'},
+      {t:0, app:'Mail + Wallet', label:'Compare with your real PG&E account', detail: pge.paid ? 'Your PG&E bill is paid. Nothing is due.' : `Your real bill is ${money(pge.amt)} due ${pge.due}, not $389.`},
+      {t:0, app:'Safari', label:'Check the website', detail:'pge-billing-help.co was registered 3 days ago and is not PG&E'},
+      {t:3, app:'Pay', label:'Pay $389 to a new payee', amt:389, payee:'pge-billing-help.co', blocked:true, detail:'New payee from a text, urgent tone, unknown site'}
+    ], outro: () => { s.scamSms.handled = true; return {text:'I did not pay. This text does not match your PG&E account and the website is not PG&E. It is very likely a scam.', chips:['Tell Karen about it', 'Report the number as junk']}; }};
+  }
+  if (it.k === 'text') {
+    const c = it.who;
+    if (!c.length) return {none:'Who should I text? Try "text Dana that I am on my way".'};
+    if (c.length > 1) return {ask:`Which ${c[0].split(' ')[0]}?`, chips: c.map(n => `Text ${n}${it.body ? ' that ' + it.body : ''}`)};
+    const body = it.body || 'On my way!';
+    return {title:'Send a message', intro:'', steps:[{t:2, app:'Messages', label:`Text ${c[0]}`, detail:`"${body}"`, run: () => { s.sent.push({to:c[0], text:body}); log(`Texted ${c[0]}: "${body}"`, 2, 'Messages'); }}], outro: () => ({text:`Sent to ${c[0]}.`})};
+  }
+  if (it.k === 'call') {
+    const c = it.who;
+    if (!c.length) return {none:'Who should I call? Try "call Dana".'};
+    if (c.length > 1) return {ask:`I found ${c.length} people named ${c[0].split(' ')[0]}. Which one?`, chips: c.map(n => `Call ${n}`)};
+    return {title:'Call', intro:'', steps:[{t:2, app:'Phone', label:`Call ${c[0]}`, detail:'Mobile', run: () => { s.call = {who:c[0], start:Date.now()}; log(`Called ${c[0]}`, 2, 'Phone'); }}], outro: () => ({text:`Calling ${c[0]}. Tap the red button on top to hang up.`})};
+  }
+  if (it.k === 'remind') {
+    const m = (window.__q || '').match(/remind me (?:to )?(.+)/i);
+    let body = m ? m[1] : 'something';
+    let when = 'Today';
+    const wm = body.match(/\s+((?:at|on|tomorrow|tonight|in|this|next)\b.*)$/i);
+    if (wm) { when = wm[1].replace(/^at /i, 'Today at '); body = body.slice(0, wm.index); }
+    body = body.charAt(0).toUpperCase() + body.slice(1);
+    return {title:'Reminder', intro:'', quick:true, steps:[{t:1, app:'Reminders', label:`Add "${body}"`, detail: when.charAt(0).toUpperCase() + when.slice(1), run: () => { const r = {id:'r'+s.seq, text:body, when, done:false}; s.reminders.push(r); log('Added reminder: ' + body, 1, 'Reminders', () => { s.reminders = s.reminders.filter(x => x !== r); }); }}], outro: () => ({text:`Done. I will remind you: ${body}, ${when}.`})};
+  }
+  return null;
+}
+
+/* ---------- rendering ---------- */
+function tierPill(t) { return `<span class="tier T${t}" title="${['Read only','Reversible','Sends or books','Money'][t]}">T${t}</span>`; }
+function renderStep(p, st, i) {
+  const icon = {done:'✓', blocked:'!', fallback:'→', skipped:'–'}[st.status] || (st.status === 'run' ? '' : i + 1);
+  if (p.state === 'editing') {
+    return `<div class="st"><input type="checkbox" data-f="step" data-p="${p.id}" data-i="${i}" ${st.skip ? '' : 'checked'} aria-label="Include step ${i+1}"><div><span class="lbl">${esc(st.label)}</span><small>${esc(st.app)}</small>${st.editable ? `<label style="display:flex;gap:6px;align-items:center;margin-top:4px;font-size:11.5px">Amount <input class="amt" data-f="amt" data-p="${p.id}" data-i="${i}" inputmode="decimal" value="${st.amt.toFixed(2)}" aria-label="Amount for ${esc(st.label)}"></label>` : ''}</div>${tierPill(st.t)}</div>`;
+  }
+  return `<div class="st ${st.status || ''}"><span class="dot">${icon}</span><div><span class="lbl">${esc(st.label)}${st.amt && !st.blocked ? ' · ' + money(st.amt) : ''}</span><small>${esc(st.app)} · ${esc(st.detail)}</small>${st.note ? `<span class="note">${esc(st.note)}</span>` : ''}</div>${tierPill(st.t)}</div>`;
+}
+function renderPlan(p) {
+  const pay = p.steps.filter(x => x.amt && !x.blocked && !x.skip).reduce((a, b) => a + b.amt, 0);
+  const needs = p.steps.some(x => x.t >= 2 && !x.blocked);
+  let actions = '';
+  if (p.state === 'proposed') actions = `<div class="row"><button class="btn wide" data-a="approve" data-p="${p.id}">${S.settings.driving ? 'Yes, do it' : needs ? 'Approve plan' : 'Run'}</button><button class="btn alt" data-a="edit" data-p="${p.id}">Edit</button><button class="btn alt" data-a="cancel" data-p="${p.id}">Cancel</button></div>`;
+  if (p.state === 'editing') actions = `<div class="row"><button class="btn wide" data-a="save" data-p="${p.id}">Save changes</button><button class="btn alt" data-a="cancel" data-p="${p.id}">Cancel</button></div>`;
+  const status = {running:'<span class="wave"><i></i><i></i><i></i></span> Working…', done:'Finished', cancelled:'Cancelled. Nothing was done.'}[p.state];
+  return `<div class="card"><h3><span>${esc(p.title)}</span><span style="font-size:11px;color:var(--scr-muted);font-family:var(--body);font-weight:600">${p.steps.length} step${p.steps.length>1?'s':''}</span></h3>
+    <div class="sub">${pay ? 'Money involved: ' + money(pay) + ' · ' : ''}${p.steps.some(x=>x.t===3) ? 'No new payees. ' : ''}Nothing leaves these apps.</div>
+    ${p.steps.map((st, i) => renderStep(p, st, i)).join('')}${actions}${status ? `<div class="status-line">${status}</div>` : ''}</div>`;
+}
+function renderFeedItem(f) {
+  if (f.k === 'me') return `<div class="m me">${esc(f.text)}</div>`;
+  if (f.k === 'ai') return `<div class="m ai">${esc(f.text)}</div>`;
+  if (f.k === 'sys') return `<div class="sys">${esc(f.text)}</div>`;
+  if (f.k === 'chips') return `<div class="chips">${f.chips.map(c => `<button class="chip" data-a="say" data-t="${esc(c)}">${esc(c)}</button>`).join('')}</div>`;
+  if (f.k === 'plan') return renderPlan(f.plan);
+  if (f.k === 'receipt') return `<div class="card receipt"><h3><span style="display:flex;gap:8px;align-items:center"><span class="check">✓</span>Receipt</span><span style="font-size:11px;color:var(--scr-muted);font-family:var(--body)">${hm(NOW)}</span></h3>${f.lines.map(l => `<div class="ln"><span>${esc(l[0])}</span><span>${money(l[1])}</span></div>`).join('')}<div class="tot"><span>Total</span><span>${money(f.lines.reduce((a,b)=>a+b[1],0))}</span></div><div class="row"><button class="btn alt wide" data-a="open" data-app="activity">View in Activity</button></div></div>`;
+  return '';
+}
+function islandHTML(s) {
+  if (s.call) { const sec = Math.floor((Date.now() - s.call.start) / 1000); return `<div class="island wide" id="island"><span class="ic" style="background:#30a46c">${I.phone.replace('<svg','<svg width="11" height="11"')}</span><span>${esc(s.call.who.split(' ')[0])} ${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}</span><button class="end" data-a="hangup" aria-label="End call">End</button></div>`; }
+  if (s.timer) { const left = Math.max(0, Math.ceil((s.timer.end - Date.now()) / 1000)); return `<div class="island wide ${left === 0 ? 'flash' : ''}" id="island"><span class="ic" style="background:#f5a524;color:#000">${I.timer.replace('<svg','<svg width="11" height="11"')}</span><span>${left === 0 ? 'Timer done' : Math.floor(left/60) + ':' + String(left%60).padStart(2,'0')}</span><button class="end" data-a="timer-x" aria-label="Cancel timer" style="background:#3a3a3f">×</button></div>`; }
+  return `<div class="island" id="island"></div>`;
+}
+function homeHTML(s) {
+  const due = s.bills.filter(b => b.owner === 'me' && !b.paid);
+  const next = s.events.filter(e => e.start >= NOW).sort((a,b)=>a.start-b.start)[0];
+  const unread = s.scamSms.handled ? 0 : 1;
+  const app = (a, label, bg, fg, icon, badge) => `<button class="app" data-a="open" data-app="${a}"><span class="ico badge" style="background:${bg};color:${fg}">${icon}${badge ? `<em>${badge}</em>` : ''}</span>${label}</button>`;
+  return `<div class="home">
+    <div class="clock"><small>Tuesday, November 10</small><b>7:42</b></div>
+    <button class="widget" data-a="say" data-t="Give me my rundown for today"><span class="wh"><span class="orbmini"></span>Siri · Today</span>
+      <span class="wl"><span>${esc(next.title)}</span><span>${hm(next.start)}</span>
+      <span>${due.length ? due.length + ' bill' + (due.length>1?'s':'') + ' due this week' : 'No bills due'}</span><span>${due.length ? money(due.reduce((a,b)=>a+b.amt,0)) : '✓'}</span>
+      <span>Debit •4417</span><span>${money(s.balance)}</span></span>
+      <span style="display:block;margin-top:8px;font-size:12px;color:var(--accent);font-weight:600">Tap for your rundown →</span></button>
+    <div class="apps">
+      ${app('calendar','Calendar','#fff','#e5484d',I.cal)}${app('wallet','Wallet','#111','#fff',I.wallet)}${app('messages','Messages','#30a46c','#fff',I.msg, unread)}${app('reminders','Reminders','#fff','#f5a524',I.rem, s.reminders.filter(r=>!r.done).length)}
+      ${app('activity','Activity','linear-gradient(135deg,#4f46e5,#e2557a)','#fff',I.act)}${app('settings','Siri rules','#8e8e93','#fff',I.shield)}
+    </div>
+    <div class="dock"><button class="talk" data-a="siri"><span class="orb"></span>Ask Siri</button></div>
+  </div>`;
+}
+function appHTML(s, a) {
+  const bar = t => `<div class="appbar"><button class="back" data-a="home">‹ Home</button><h2>${t}</h2><span style="width:50px"></span></div>`;
+  let list = '';
+  if (a === 'calendar') { list = s.events.slice().sort((x,y)=>x.start-y.start).map(e => `<div class="li"><div class="h"><span>${esc(e.title)}</span><span style="font-variant-numeric:tabular-nums">${hm(e.start)}</span></div><small>${esc(e.where)}</small></div>`).join(''); return bar('Today') + `<div class="list">${list}</div>`; }
+  if (a === 'wallet') { list = `<div class="bal"><span style="font-size:12px;opacity:.85">Debit •4417 · available</span><b>${money(s.balance)}</b><span style="font-size:12px;opacity:.85">Agent spending this month: ${money(s.settings.spent)} of ${money(s.settings.cap)}</span></div>` + s.bills.map(b => `<div class="li"><div class="h"><span>${esc(b.full)}</span><span class="pill ${b.paid ? 'paid' : 'due'}">${b.paid ? 'Paid' : 'Due ' + b.due.split(',')[0]}</span></div><small>${money(b.amt)} · ${esc(b.src)}</small>${!b.paid ? `<button class="lnk" data-a="say" data-t="${b.owner === 'mom' ? "Pay mom's water bill" : 'Pay ' + b.payee}">Ask Siri to pay</button>` : ''}</div>`).join(''); return bar('Wallet') + `<div class="list">${list}</div>`; }
+  if (a === 'messages') { list = (!s.scamSms.handled ? `<div class="li"><div class="h"><span>${esc(s.scamSms.from)}</span><span class="pill due">Suspicious</span></div><div class="sms">${esc(s.scamSms.text)}</div><button class="lnk" data-a="say" data-t="Is the text I got about my power bill a scam?">Ask Siri about this</button></div>` : `<div class="li"><div class="h"><span>${esc(s.scamSms.from)}</span><span class="pill paid">Checked</span></div><small>Marked as a likely scam by Siri</small></div>`) + s.sent.slice().reverse().map(m => `<div class="li"><div class="h"><span>To ${esc(m.to)}</span><span class="pill paid">Sent</span></div><div class="sms">${esc(m.text)}</div></div>`).join(''); return bar('Messages') + `<div class="list">${list}</div>`; }
+  if (a === 'reminders') { list = s.reminders.length ? s.reminders.map(r => `<label class="li" style="flex-direction:row;gap:10px;align-items:center"><input type="checkbox" data-f="rem" data-id="${r.id}" ${r.done ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--accent)"><span style="display:flex;flex-direction:column"><span style="${r.done ? 'text-decoration:line-through;opacity:.6' : ''}">${esc(r.text)}</span><small>${esc(r.when)}</small></span></label>`).join('') : '<div class="li"><small>No reminders.</small></div>'; return bar('Reminders') + `<div class="list">${list}</div>`; }
+  if (a === 'activity') { list = s.activity.length ? s.activity.map(e => `<div class="li ${e.undone ? 'undone' : ''}"><div class="h"><span>${esc(e.text)}</span>${tierPill(e.tier)}</div><small>${esc(e.app)} · ${e.time}${e.undone ? ' · Undone' : ''}</small>${e.undoable && !e.undone ? `<button class="lnk" data-a="undo" data-id="${e.id}" style="align-self:flex-start">Undo</button>` : ''}${e.note && !e.undone ? `<small>${esc(e.note)}</small>` : ''}</div>`).join('') : '<div class="li"><small>Nothing yet. Every action Siri takes shows up here, with Undo where the app supports it.</small></div>'; return bar('Activity') + `<div class="list">${list}</div>`; }
+  if (a === 'settings') { const st = s.settings; const sw = (k, on, label, sub) => `<div class="li"><div class="set"><span><b style="font-weight:600">${label}</b><br><small>${sub}</small></span><button class="sw" role="switch" aria-checked="${on}" data-a="toggle" data-k="${k}" aria-label="${label}"></button></div></div>`;
+    list = `<div class="li"><div class="set"><b style="font-weight:600">Monthly agent spending cap</b><b style="font-variant-numeric:tabular-nums">${money(st.cap)}</b></div><input type="range" min="0" max="1000" step="50" value="${st.cap}" data-f="cap" aria-label="Monthly cap"><small>Spent so far: ${money(st.spent)}. Payments over the cap are stopped.</small></div>
+    <div class="li"><div class="set"><span><b style="font-weight:600">Auto-approve known bills</b><br><small>Skip Face ID for payees you have paid before</small></span><select class="sel" data-f="auto" aria-label="Auto-approve under"><option value="0" ${st.autoUnder==0?'selected':''}>Never</option><option value="50" ${st.autoUnder==50?'selected':''}>Under $50</option><option value="100" ${st.autoUnder==100?'selected':''}>Under $100</option></select></div></div>
+    ${sw('trusted', st.trusted, 'Trusted contact: Karen', 'Told about payments over $100 and blocked scams')}
+    ${sw('readback', st.readback, 'Read amounts aloud', 'Siri says the payee and amount before paying')}
+    ${sw('driving', st.driving, 'Driving mode', 'Hands-free approvals. Payments wait until you park')}`;
+    return bar('Siri rules') + `<div class="list">${list}</div>`; }
+  return '';
+}
+function siriHTML(s, v) {
+  const empty = !v.feed.length;
+  const sugg = ['Give me my rundown for today', 'Pay my bills due this week', "I'm running 30 minutes late for my 3 o'clock", "Pay mom's water bill", 'Call Alice', 'Set a timer for 1 minute'];
+  return `<div class="siri ${v.listening ? 'listening' : ''}"><div class="glow"></div>
+    <div class="shead"><b><span class="orbmini"></span>Siri</b><button class="iconbtn" data-a="home" aria-label="Close Siri">✕</button></div>
+    <div class="feed" id="feed">${empty ? `<div class="m ai">Hi. I can plan and finish tasks across your apps, and I always show you the plan first. What do you need?</div><div class="chips">${sugg.map(c => `<button class="chip" data-a="say" data-t="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : v.feed.map(renderFeedItem).join('')}</div>
+    <form class="composer" data-form="ask"><div class="cap">${v.listening ? `<span style="display:flex;gap:8px;align-items:center"><span class="wave"><i></i><i></i><i></i><i></i><i></i></span><b>${esc(v.caption)}</b></span>` : (v.busy ? 'Working on it…' : 'Type, or tap the mic and pick a suggestion')}</div>
+      <div class="cin"><input id="ask" autocomplete="off" placeholder="Ask Siri…" aria-label="Ask Siri" ${v.busy || v.listening ? 'disabled' : ''}><button class="mic" type="submit" aria-label="Send">${I.send}</button></div></form>
+  </div>`;
+}
+function sheetHTML(sh) {
+  if (!sh) return '';
+  const st = S.settings;
+  return `<div class="scrim"><div class="sheet" role="dialog" aria-label="Confirm payment">
+    <span class="eyebrow" style="color:var(--scr-muted)">Siri wants to pay</span>
+    <div class="big">${money(sh.amt)}</div><div class="to">to <b>${esc(sh.payee)}</b></div>
+    ${st.readback ? `<div class="say">Siri says: "Paying ${money(sh.amt)} to ${esc(sh.payee)}. Look at your phone to confirm."</div>` : ''}
+    ${sh.driving ? `<div class="warn">You are driving. I will hold this payment until you park.</div>` : sh.over ? `<div class="warn">This goes over your monthly agent cap of ${money(st.cap)} (${money(st.spent)} spent).</div>` : `<div class="fid ${sh.phase === 'scan' ? 'scan' : sh.phase === 'ok' ? 'ok' : ''}">${sh.phase === 'ok' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>' : I.face}</div>`}
+    <div class="row" style="width:100%">${sh.driving ? `<button class="btn wide" data-a="sheet-no">Hold until I park</button>` : sh.over ? `<button class="btn wide" data-a="raise">Raise cap by $200</button><button class="btn alt" data-a="sheet-no">Skip</button>` : `<button class="btn wide" data-a="sheet-yes" ${sh.phase ? 'aria-disabled="true"' : ''}>${sh.phase === 'scan' ? 'Scanning…' : sh.phase === 'ok' ? 'Confirmed' : 'Confirm with Face ID'}</button><button class="btn alt" data-a="sheet-no" ${sh.phase ? 'aria-disabled="true"' : ''}>Skip</button>`}</div>
+  </div></div>`;
+}
+function phoneHTML(s, v) {
+  let body = v.screen === 'home' ? homeHTML(s) : v.screen === 'siri' ? siriHTML(s, v) : `<div class="appv">${appHTML(s, v.screen)}</div>`;
+  return `<div class="screen"><div class="sbar"><span>7:42</span><span class="r">5G <span class="batt"><i></i></span></span></div>${islandHTML(s)}<div class="body">${body}</div>${sheetHTML(v.sheet)}<div class="home-ind"></div></div>`;
+}
+
+/* ---------- live render ---------- */
+const device = document.getElementById('device');
+function render() {
+  const inp = document.getElementById('ask'); const val = inp ? inp.value : ''; const foc = document.activeElement === inp;
+  const fe = document.getElementById('feed'); const atBottom = !fe || fe.scrollHeight - fe.scrollTop - fe.clientHeight < 40;
+  const lst = device.querySelector('.list'); const lstTop = lst ? lst.scrollTop : 0; const prevScreen = render.prev;
+  device.innerHTML = phoneHTML(S, V);
+  const ni = document.getElementById('ask'); if (ni) { ni.value = val; if (foc && !ni.disabled) ni.focus(); }
+  const nf = document.getElementById('feed'); if (nf && atBottom) nf.scrollTop = nf.scrollHeight;
+  const nl = device.querySelector('.list'); if (nl && prevScreen === V.screen) nl.scrollTop = lstTop;
+  render.prev = V.screen;
+  renderInspector();
+}
+function renderInspector() {
+  const s = S, st = s.settings;
+  const evs = s.events.slice().sort((a,b)=>a.start-b.start);
+  document.getElementById('inspector').innerHTML = `
+    <div><div class="eyebrow">Live state</div><h2>What Siri changed</h2></div>
+    <div><div class="kv"><span>Debit •4417</span><b>${money(s.balance)}</b></div>
+    ${s.bills.map(b => `<div class="kv"><span>${esc(b.full)}</span><span class="pill ${b.paid ? 'paid' : 'due'}">${b.paid ? 'Paid' : money(b.amt)}</span></div>`).join('')}
+    <div class="kv"><span>Kitchen quote</span><span>${hm(evs.find(e=>e.id==='e3').start)}</span></div>
+    <div class="kv"><span>Reminders</span><span>${s.reminders.filter(r=>!r.done).length} open</span></div>
+    <div class="kv"><span>Messages sent</span><span>${s.sent.length}</span></div>
+    <div class="kv"><span>Timer</span><span>${s.timer ? 'Running' : 'None'}</span></div></div>
+    <div><div class="kv" style="border:0"><span>Agent spend, Nov</span><span>${money(st.spent)} / ${money(st.cap)}</span></div><div class="meter"><i style="width:${Math.min(100, st.cap ? st.spent / st.cap * 100 : 100)}%"></i></div></div>
+    <div><div class="eyebrow" style="margin-bottom:6px">Activity · ${s.activity.length}</div>${s.activity.slice(0,4).map(e => `<div class="kv"><span style="${e.undone?'text-decoration:line-through':''}">${esc(e.text)}</span>${tierPill(e.tier)}</div>`).join('') || '<div class="kv"><span>Nothing yet</span></div>'}</div>
+    <div class="legend"><span class="eyebrow">Permission by risk</span>
+      <div>${tierPill(0)}<span>Read only. Runs at once.</span></div>
+      <div>${tierPill(1)}<span>Reversible. Runs, then offers Undo.</span></div>
+      <div>${tierPill(2)}<span>Sends or calls. Needs your yes.</span></div>
+      <div>${tierPill(3)}<span>Money. Face ID, read-back, caps.</span></div></div>`;
+}
+
+/* ---------- flows ---------- */
+let planSeq = 1; const plans = {};
+function push(f) { V.feed.push(f); }
+async function ask(text, opts = {}) {
+  if (V.busy) return;
+  V.screen = 'siri'; V.sheet = null;
+  if (opts.voice) { V.listening = true; V.caption = ''; render(); for (let i = 1; i <= text.length; i += Math.max(1, Math.round(text.length / 14))) { V.caption = text.slice(0, i); renderCaption(); await wait(45); } V.caption = text; renderCaption(); await wait(250); V.listening = false; }
+  push({k:'me', text}); V.busy = true; render(); await wait(350);
+  window.__q = text;
+  const it = intent(text);
+  try { await handle(it); } finally { V.busy = false; render(); }
+}
+function renderCaption() { const c = device.querySelector('.cap b'); if (c) c.textContent = V.caption; else render(); }
+async function handle(it) {
+  const s = S;
+  if (it.k === 'help' || it.k === 'unknown') { push({k:'ai', text: it.k === 'unknown' ? "I can't do that in this demo yet. Here is what I can do:" : 'Here are some things to try:'}); push({k:'chips', chips:['Give me my rundown for today','Pay my bills due this week',"Pay mom's water bill",'Is the text I got a scam?','Text Dana that I am on my way','Remind me to call the dentist tomorrow at 9','Set a timer for 1 minute']}); return; }
+  if (it.k === 'timer') { s.timer = {end: Date.now() + it.secs * 1000, total: it.secs}; log(`Timer for ${fmtSecs(it.secs)}`, 1, 'Clock', () => { s.timer = null; }); push({k:'sys', text:`Timer · ${fmtSecs(it.secs)} · started`}); push({k:'ai', text:`Timer set for ${fmtSecs(it.secs)}. It's on top of the screen.`}); return; }
+  if (it.k === 'timer-add') { s.timer.end += it.secs * 1000; push({k:'ai', text:`Added ${fmtSecs(it.secs)}. ${fmtSecs(Math.ceil((s.timer.end - Date.now())/1000))} left.`}); return; }
+  if (it.k === 'timer-cancel') { if (s.timer) { s.timer = null; push({k:'ai', text:'Timer cancelled.'}); } else push({k:'ai', text:'There is no timer running.'}); return; }
+  if (it.k === 'scam-tell') { if (!s.settings.trusted) { push({k:'ai', text:'Trusted contact is off in Siri rules. Turn it on to tell Karen.'}); return; } s.sent.push({to:'Karen', text:'Heads up: Dad got a fake PG&E text asking for $389. Siri blocked it.'}); log('Told Karen about a scam text', 2, 'Messages'); push({k:'ai', text:'Done. I told Karen and kept the text for your records.'}); return; }
+  if (it.k === 'scam-junk') { s.scamSms.handled = true; log('Reported +1 (833) 555-0199 as junk', 1, 'Messages', () => {}); push({k:'ai', text:'Reported as junk. Future texts from this number go to the junk folder.'}); return; }
+  const p0 = stepsFor(it);
+  if (!p0) { push({k:'ai', text:"Sorry, I didn't get that."}); return; }
+  if (p0.none) { push({k:'ai', text:p0.none}); return; }
+  if (p0.ask) { push({k:'ai', text:p0.ask}); push({k:'chips', chips:p0.chips}); return; }
+  const plan = Object.assign({id:'p' + (planSeq++), state:'proposed'}, p0);
+  plan.steps.forEach(x => { x.status = ''; });
+  plans[plan.id] = plan;
+  if (plan.intro) push({k:'ai', text:plan.intro});
+  push({k:'plan', plan});
+  const needs = plan.steps.some(x => x.t >= 2 && !x.blocked);
+  if (!needs) { render(); await wait(600); await execute(plan); }
+}
+function fmtSecs(n) { if (n >= 3600) return (n/3600) + (n === 3600 ? ' hour' : ' hours'); if (n >= 60) { const m = Math.round(n/60); return m + (m === 1 ? ' minute' : ' minutes'); } return n + ' seconds'; }
+async function execute(plan) {
+  const s = S; plan.state = 'running'; V.busy = true; render();
+  const receipt = [];
+  for (const st of plan.steps) {
+    if (st.skip) { st.status = 'skipped'; render(); continue; }
+    st.status = 'run'; render(); await wait(650);
+    if (st.blocked) { st.status = 'blocked'; st.note = 'Blocked. I never pay new payees from a text.'; log(`Blocked ${money(st.amt)} payment to ${st.payee}`, 3, 'Siri'); if (s.settings.trusted) st.note += ' Karen can be told.'; render(); continue; }
+    if (st.t === 3) {
+      const auto = s.settings.autoUnder > 0 && st.known && st.amt < s.settings.autoUnder && s.settings.spent + st.amt <= s.settings.cap && !s.settings.driving;
+      let ok = auto;
+      if (auto) st.note = `Auto-approved by your rule (known payee under $${s.settings.autoUnder})`;
+      else ok = await confirmPay(st);
+      if (!ok) { st.status = 'skipped'; st.note = s.settings.driving ? 'Held until you park' : 'Skipped. Nothing was charged.'; render(); continue; }
+      if (s.settings.trusted && st.amt > 100) log(`Karen was told about a ${money(st.amt)} payment`, 2, 'Messages');
+    }
+    if (s.settings.driving && st.t === 2 && st.app === 'Messages') st.note = 'Read aloud and confirmed by voice';
+    const r = st.run ? st.run(st) : null;
+    if (r && r.status) { st.status = r.status; st.note = r.note; log('Saved for later: ' + st.label, st.t, st.app); }
+    else st.status = 'done';
+    if (r && r.receipt) receipt.push(r.receipt);
+    render();
+  }
+  plan.state = 'done';
+  const o = plan.outro ? plan.outro(plan) : null;
+  if (receipt.length) push({k:'receipt', lines: receipt});
+  if (o) { push({k:'ai', text:o.text}); if (o.chips) push({k:'chips', chips:o.chips}); }
+  V.busy = false; render();
+}
+function confirmPay(st) {
+  const s = S;
+  V.sheet = {amt: st.amt, payee: st.payee, over: s.settings.spent + st.amt > s.settings.cap, driving: s.settings.driving, phase: ''};
+  render();
+  return new Promise(res => { sheetResolve = res; });
+}
+
+/* ---------- actions ---------- */
+const A = {
+  siri: () => { V.screen = 'siri'; render(); const i = document.getElementById('ask'); if (i) i.focus(); },
+  home: () => { if (V.busy) return; V.screen = 'home'; render(); },
+  open: el => { if (V.busy) return; V.screen = el.dataset.app; render(); },
+  say: el => ask(el.dataset.t, {voice:true}),
+  approve: el => { const p = plans[el.dataset.p]; if (p && p.state === 'proposed') execute(p); },
+  edit: el => { const p = plans[el.dataset.p]; p.state = 'editing'; render(); },
+  save: el => { const p = plans[el.dataset.p]; p.state = 'proposed'; const kept = p.steps.filter(x => !x.skip).length; push({k:'sys', text:`Plan updated · ${kept} of ${p.steps.length} steps`}); render(); },
+  cancel: el => { const p = plans[el.dataset.p]; p.state = 'cancelled'; push({k:'ai', text:'Cancelled. Nothing was done.'}); render(); },
+  'sheet-yes': async () => { if (!V.sheet || V.sheet.phase) return; V.sheet.phase = 'scan'; render(); await wait(900); V.sheet.phase = 'ok'; render(); await wait(450); V.sheet = null; render(); const r = sheetResolve; sheetResolve = null; r && r(true); },
+  'sheet-no': () => { V.sheet = null; render(); const r = sheetResolve; sheetResolve = null; r && r(false); },
+  raise: () => { S.settings.cap += 200; V.sheet.over = S.settings.spent + V.sheet.amt > S.settings.cap; render(); },
+  undo: el => { const e = S.activity.find(x => x.id === el.dataset.id); if (!e || e.undone) return; undoFns[e.id] && undoFns[e.id](); e.undone = true; render(); },
+  toggle: el => { const k = el.dataset.k; S.settings[k] = !S.settings[k]; render(); },
+  hangup: () => { S.call = null; push({k:'sys', text:'Call ended'}); render(); },
+  'timer-x': () => { S.timer = null; push({k:'sys', text:'Timer cancelled'}); render(); },
+  reset: () => { if (V.busy && !V.sheet) return; S = fresh(); V = {screen:'home', feed:[], sheet:null, listening:false, caption:'', busy:false}; sheetResolve = null; render(); }
+};
+document.addEventListener('click', e => { const el = e.target.closest('[data-a]'); if (!el || el.getAttribute('aria-disabled') === 'true') return; if (el.closest('.frame')) return; e.preventDefault(); A[el.dataset.a] && A[el.dataset.a](el); });
+document.addEventListener('submit', e => { const f = e.target.closest('[data-form="ask"]'); if (!f) return; e.preventDefault(); const i = document.getElementById('ask'); const q = i.value.trim(); if (!q) { const t = ['Give me my rundown for today','Pay my bills due this week','Set a timer for 1 minute']; ask(t[Math.floor(Date.now()/1000) % 3], {voice:true}); return; } i.value = ''; ask(q); });
+document.addEventListener('change', e => {
+  const el = e.target; const f = el.dataset && el.dataset.f; if (!f) return;
+  if (f === 'step') { plans[el.dataset.p].steps[+el.dataset.i].skip = !el.checked; }
+  if (f === 'amt') { const v = parseFloat(el.value.replace(/[^0-9.]/g, '')); const st = plans[el.dataset.p].steps[+el.dataset.i]; if (v > 0) st.amt = Math.round(v * 100) / 100; render(); }
+  if (f === 'rem') { const r = S.reminders.find(x => x.id === el.dataset.id); r.done = el.checked; render(); }
+  if (f === 'auto') { S.settings.autoUnder = +el.value; render(); }
+  if (f === 'cap') { S.settings.cap = +el.value; render(); }
+});
+document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.f === 'cap') { S.settings.cap = +e.target.value; const b = e.target.closest('.li').querySelector('.set b:last-child'); if (b) b.textContent = money(S.settings.cap); } });
+
+/* timer / call tick */
+let doneShown = false;
+setInterval(() => {
+  if (!S.timer && !S.call) return;
+  const isl = document.getElementById('island');
+  if (S.timer && S.timer.end <= Date.now() && !doneShown) { doneShown = true; push({k:'sys', text:'Timer done'}); if (V.screen !== 'siri') V.screen = V.busy ? V.screen : V.screen; render(); setTimeout(() => { S.timer = null; doneShown = false; render(); }, 4000); return; }
+  if (isl) { const tmp = document.createElement('div'); tmp.innerHTML = islandHTML(S); isl.replaceWith(tmp.firstChild); }
+}, 1000);
+
+/* ---------- scenarios rail ---------- */
+const SC = [
+  ['AR','#4f46e5','Arjun, 27','Product manager, packed week','Give me my rundown for today'],
+  ['RO','#e2557a','Rosa, 34','Single mom, hourly shifts, tight budget','Pay my bills due this week'],
+  ['DA','#b9800f','David, 41','Contractor, drives all day','I\'m running 30 minutes late for my 3 o\'clock'],
+  ['LI','#14a3a3','Linh, 52','Nurse, pays her mother\'s bills',"Pay mom's water bill"],
+  ['WA','#6b7280','Walter, 74','Retired, worried about scams','Is the text I got about my power bill a scam?'],
+  ['TO','#2a6bd1','Tom, 33','Commuter, two contacts named Alice','Call Alice'],
+  ['ME','#23885a','Basics','Fast and right, every time','Set a timer for 1 minute']
+];
+document.getElementById('scenarios').innerHTML = SC.map(c => `<button class="scen" data-a="say" data-t="${esc(c[4])}"><span class="av" style="background:${c[1]}">${c[0]}</span><span><b>${esc(c[2])}</b><span>${esc(c[3])}</span><q>${esc(c[4])}</q></span></button>`).join('');
+
+/* ---------- screens board ---------- */
+function buildBoard() {
+  const keep = S, keepV = V;
+  const frames = [];
+  const snap = (label, sub, setup) => { S = fresh(); V = {screen:'home', feed:[], sheet:null, listening:false, caption:'', busy:false}; setup(); frames.push(`<div class="frame"><div class="lbl"><b>${label}</b>${sub}</div><div class="device">${phoneHTML(S, V)}</div></div>`); };
+  const mk = (it, state, statuses) => { const p = Object.assign({id:'b'+Math.random().toString(36).slice(2,6), state}, stepsFor(it)); p.steps.forEach((x, i) => x.status = statuses ? statuses[i] || '' : ''); return p; };
+  snap('1 · Home', 'A proactive "Today" widget replaces a blank prompt', () => {});
+  snap('2 · The plan', 'Steps, apps, money at stake, tier per step', () => { V.screen = 'siri'; const p = mk({k:'bills'}, 'proposed'); V.feed = [{k:'me', text:'Pay my bills due this week'}, {k:'ai', text:p.intro}, {k:'plan', plan:p}]; });
+  snap('3 · Money needs Face ID', 'Spoken read-back of payee and amount', () => { V.screen = 'siri'; const p = mk({k:'bills'}, 'running', ['done','done','run']); V.feed = [{k:'me', text:'Pay my bills due this week'}, {k:'plan', plan:p}]; V.sheet = {amt:87.40, payee:'Pacific Gas & Electric', over:false, phase:''}; });
+  snap('4 · Receipt', 'Every action logged, balance updated', () => { V.screen = 'siri'; const p = mk({k:'bills'}, 'done', ['done','done','done','done','done']); S.bills[0].paid = S.bills[1].paid = true; S.balance -= 127.40; V.feed = [{k:'plan', plan:p}, {k:'receipt', lines:[['Pacific Gas & Electric', 87.40], ['Metro by T-Mobile', 40.00]]}, {k:'ai', text:'Paid PG&E $87.40 and Metro PCS $40.00. You have $484.78 left on Debit •4417.'}]; });
+  snap('5 · Saying no for you', 'A scam text is checked and blocked', () => { V.screen = 'siri'; const p = mk({k:'scam'}, 'done', ['done','done','done','blocked']); p.steps[3].note = 'Blocked. I never pay new payees from a text. Karen can be told.'; V.feed = [{k:'me', text:'Pay the electric bill from the text I just got'}, {k:'plan', plan:p}, {k:'ai', text:'I did not pay. This text does not match your PG&E account. It is very likely a scam.'}, {k:'chips', chips:['Tell Karen about it','Report the number as junk']}]; });
+  snap('6 · Activity and undo', 'Reversible actions can be undone', () => { V.screen = 'activity'; S.timer = {end: Date.now() + 272000}; log('Moved "Kitchen quote, Morales" to 3:30 PM', 1, 'Calendar', () => {}); log('Texted Ana Morales: running late', 2, 'Messages'); log('Paid Pacific Gas & Electric $87.40', 3, 'Wallet'); log('Blocked $389.00 payment to pge-billing-help.co', 3, 'Siri'); log('Added reminder: Check bills for December', 1, 'Reminders', () => {}); S.activity.forEach(a => a.time = '7:44 AM'); });
+  document.getElementById('frames').innerHTML = frames.join('');
+  S = keep; V = keepV;
+}
+
+/* ---------- routing ---------- */
+function route() {
+  const h = location.hash.replace('#', '') || 'prototype';
+  const scr = h === 'screens';
+  document.getElementById('view-prototype').hidden = scr;
+  document.getElementById('view-screens').hidden = !scr;
+  document.getElementById('tab-prototype').setAttribute('aria-current', scr ? 'false' : 'page');
+  document.getElementById('tab-screens').setAttribute('aria-current', scr ? 'page' : 'false');
+  if (scr) buildBoard();
+}
+window.addEventListener('hashchange', route);
+route(); render();
+})();
+</script>

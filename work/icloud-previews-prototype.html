@@ -1,0 +1,1111 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iCloud Live Previews</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Caveat:wght@500;700&display=swap">
+<style>
+/* Layout: studio canvas. Left rail = scenarios and controls, centre = live device (Mac, iPad or iPhone), right rail = task scoreboard. Second view (#screens) = design board. */
+:root{
+  --bg:#edf1f7; --panel:#ffffff; --ink:#121826; --muted:#5b6476; --line:#dce2ec;
+  --accent:#1d6ef2; --accent-ink:#ffffff; --accent-soft:#e3edff; --ok:#13977f; --warn:#b97c06; --bad:#cf3f35;
+  --win:#ffffff; --win2:#f4f6fa; --side:#eceff4; --hair:#e2e6ee; --wink:#121826; --winmuted:#6b7385; --sel:#d9e6ff; --scrim:rgba(14,20,34,.42);
+  --display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif; --body:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --shadow:0 30px 60px -24px rgba(24,36,70,.38);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b0e15; --panel:#141924; --ink:#e8edf6; --muted:#9aa4b8; --line:#252c3a;
+  --accent:#5b9bff; --accent-ink:#06101f; --accent-soft:#16233d; --ok:#3cc9a8; --warn:#e6ad3c; --bad:#ff7166;
+  --win:#1a1f2b; --win2:#202634; --side:#161b26; --hair:#2b3242; --wink:#eef2f9; --winmuted:#9aa3b6; --sel:#22365c; --scrim:rgba(0,0,0,.55);
+  --shadow:0 30px 60px -24px rgba(0,0,0,.75); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b0e15; --panel:#141924; --ink:#e8edf6; --muted:#9aa4b8; --line:#252c3a;
+  --accent:#5b9bff; --accent-ink:#06101f; --accent-soft:#16233d; --ok:#3cc9a8; --warn:#e6ad3c; --bad:#ff7166;
+  --win:#1a1f2b; --win2:#202634; --side:#161b26; --hair:#2b3242; --wink:#eef2f9; --winmuted:#9aa3b6; --sel:#22365c; --scrim:rgba(0,0,0,.55);
+  --shadow:0 30px 60px -24px rgba(0,0,0,.75); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1440px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.top{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center}
+.brand{display:flex;gap:12px;align-items:center;min-width:0}
+.mark{width:40px;height:40px;border-radius:12px;background:linear-gradient(140deg,#5fb2ff,#1d6ef2 55%,#123f9c);display:grid;place-items:center;flex:none}
+.mark svg{width:24px;height:24px}
+.brand h1{font-size:22px;letter-spacing:-.01em}
+.brand p{margin:0;color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px}
+.tabs a{padding:7px 14px;border-radius:999px;text-decoration:none;color:var(--muted);font-weight:600;font-size:13px}
+.tabs a[aria-current="page"]{background:var(--ink);color:var(--panel)}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stage{display:grid;grid-template-columns:260px minmax(0,1fr) 284px;gap:18px;align-items:start}
+@media (max-width:1180px){.stage{grid-template-columns:1fr}.dev-col{order:-1}}
+.rail{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.rail h2{font-size:15px}
+.scen{all:unset;cursor:pointer;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px}
+.scen:hover{border-color:var(--accent)}
+.scen[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.scen:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.scen .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;color:#fff}
+.scen b{display:block;font-size:13.5px}
+.scen span{font-size:12px;color:var(--muted);display:block}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{all:unset;cursor:pointer;flex:1;text-align:center;font-size:12.5px;font-weight:600;padding:6px 6px;border-radius:7px;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg button:focus-visible{outline:2px solid var(--accent)}
+.ctl{display:flex;flex-direction:column;gap:6px}
+.ghostbtn{all:unset;cursor:pointer;text-align:center;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-weight:600;font-size:13px}
+.ghostbtn:hover{border-color:var(--ink)}
+.ghostbtn:focus-visible{outline:2px solid var(--accent)}
+.task{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.task .goal{font-weight:600;font-size:14px;line-height:1.4}
+.task.done{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.kv{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:var(--muted)}
+.kv b.hot{color:var(--bad)}
+.kv b.cool{color:var(--ok)}
+.cmp{display:grid;gap:8px}
+.cmp .row{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:center;font-size:12px}
+.cmp .bar{height:8px;border-radius:6px;background:var(--line);overflow:hidden}
+.cmp .bar i{display:block;height:100%}
+.cmp .row small{grid-column:2;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:-4px}
+.log{display:flex;flex-direction:column;gap:6px;max-height:210px;overflow:auto;font-size:12px}
+.log div{display:grid;grid-template-columns:44px 1fr;gap:6px}
+.log time{color:var(--muted);font-variant-numeric:tabular-nums}
+.pill{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap;letter-spacing:.02em}
+.pill.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.dev-col{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0}
+.fit{width:100%;display:flex;justify-content:center;overflow:hidden}
+.fit > .scaler{transform-origin:top center;flex:none}
+.hint{font-size:12px;color:var(--muted);text-align:center;max-width:62ch}
+
+/* ---------- device chrome ---------- */
+.dev{position:relative;color:var(--wink);font-family:var(--body);font-size:13px;text-align:left}
+.dev button{cursor:pointer}
+.mac{width:900px;height:590px;border-radius:12px;background:var(--win);box-shadow:var(--shadow),0 0 0 1px var(--hair);overflow:hidden;display:grid;grid-template-columns:196px 1fr;grid-template-rows:1fr}
+.ipad{width:880px;height:640px;border-radius:38px;background:#0b0c10;padding:16px;box-shadow:var(--shadow),inset 0 0 0 2px #2b2c33}
+.iphone{width:380px;height:800px;border-radius:58px;background:#0b0c10;padding:12px;box-shadow:var(--shadow),inset 0 0 0 2px #2b2c33}
+.scr{position:relative;width:100%;height:100%;overflow:hidden;background:var(--win);display:flex;flex-direction:column}
+.ipad .scr{border-radius:24px}
+.iphone .scr{border-radius:47px}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:0 22px;height:30px;font-size:12.5px;font-weight:600;flex:none;font-variant-numeric:tabular-nums}
+.iphone .sbar{height:50px;padding:6px 32px 0}
+.sbar .ic{display:flex;gap:6px;align-items:center}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:112px;height:32px;border-radius:20px;background:#000;z-index:80}
+/* sidebar */
+.side{background:var(--side);border-right:1px solid var(--hair);padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow:auto;min-width:0}
+.side h4{margin:10px 8px 4px;font-size:11px;color:var(--winmuted);font-weight:600}
+.side button{all:unset;cursor:pointer;display:flex;gap:8px;align-items:center;padding:5px 8px;border-radius:7px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side button[aria-current="true"]{background:var(--sel)}
+.side button:focus-visible{outline:2px solid var(--accent)}
+.side svg{flex:none;width:16px;height:16px;color:var(--accent)}
+.lights{display:flex;gap:8px;padding:4px 8px 10px}
+.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+.tbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--hair);flex:none}
+.tbar h3{font-size:15px;font-family:var(--body);font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbtn{all:unset;cursor:pointer;width:30px;height:28px;display:grid;place-items:center;border-radius:7px;color:var(--winmuted)}
+.tbtn:hover{background:var(--win2)}
+.tbtn svg{width:17px;height:17px}
+.tbtn[aria-pressed="true"]{background:var(--sel);color:var(--accent)}
+.tbtn:focus-visible{outline:2px solid var(--accent)}
+.search{display:flex;align-items:center;gap:6px;background:var(--win2);border:1px solid var(--hair);border-radius:8px;padding:0 8px;height:30px;width:200px}
+.search svg{width:14px;height:14px;color:var(--winmuted);flex:none}
+.search input{all:unset;flex:1;min-width:0;font-size:13px}
+.search .x{all:unset;cursor:pointer;color:var(--winmuted);font-size:12px;padding:0 2px}
+.body{flex:1;overflow:auto;padding:16px;min-height:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:18px 14px}
+.ipad .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.iphone .grid{grid-template-columns:repeat(3,1fr);gap:16px 10px}
+.tile{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;border-radius:10px;padding:6px;min-width:0}
+.tile:focus-visible{outline:2px solid var(--accent)}
+.tile[aria-selected="true"] .th{box-shadow:0 0 0 3px var(--accent)}
+.th{position:relative;width:100%;aspect-ratio:4/3;display:grid;place-items:center;border-radius:6px}
+.th img{max-width:100%;max-height:100%;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.25);display:block}
+.th .dur,.th .pg{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.66);color:#fff;font-size:10px;font-weight:600;padding:1px 5px;border-radius:5px;font-variant-numeric:tabular-nums}
+.th .scrubline{position:absolute;left:6px;right:6px;bottom:2px;height:3px;border-radius:2px;background:rgba(255,255,255,.35);overflow:hidden;opacity:0}
+.th .scrubline i{display:block;height:100%;width:0;background:#fff}
+.tile.scrubbing .scrubline{opacity:1}
+.tile.scrubbing .dur{opacity:0}
+.cloudb{position:absolute;left:4px;top:4px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.cloudb svg{width:14px;height:14px;color:#1d6ef2}
+.nm{font-size:12px;font-weight:500;text-align:center;line-height:1.25;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt{font-size:11px;color:var(--winmuted);text-align:center;font-variant-numeric:tabular-nums;margin-top:-4px;white-space:nowrap}
+.snip{font-size:10.5px;color:var(--winmuted);text-align:center;line-height:1.3;margin-top:-2px}
+.snip mark{background:color-mix(in srgb,var(--warn) 30%,transparent);color:inherit;border-radius:3px;padding:0 2px}
+/* generic icon (today) */
+.gi{position:relative;width:54%;aspect-ratio:3/4;background:linear-gradient(#fff,#eef1f6);border-radius:3px 12px 3px 3px;box-shadow:0 1px 3px rgba(0,0,0,.25);display:flex;align-items:flex-end;justify-content:center;padding-bottom:12%}
+.gi::before{content:"";position:absolute;right:0;top:0;width:28%;aspect-ratio:1;background:linear-gradient(225deg,transparent 50%,#d7dce5 50%);border-radius:0 12px 0 3px}
+.gi b{font-size:10px;letter-spacing:.06em;color:#fff;padding:1px 6px;border-radius:3px}
+.gi svg{position:absolute;top:26%;left:50%;transform:translateX(-50%);width:42%;height:auto;color:#a0a9ba}
+/* list view */
+.list{display:flex;flex-direction:column;font-size:12.5px}
+.lrow{all:unset;cursor:pointer;display:grid;grid-template-columns:34px minmax(0,1fr) 92px 70px 26px;gap:10px;align-items:center;padding:4px 8px;border-radius:6px;font-variant-numeric:tabular-nums}
+.lrow:nth-child(even){background:var(--win2)}
+.lrow[aria-selected="true"]{background:var(--sel)}
+.lrow .lt{width:34px;height:26px;display:grid;place-items:center}
+.lrow .lt img{max-width:34px;max-height:26px;border-radius:2px}
+.lrow .lt .gi{width:18px;padding:0}
+.lrow .lt .gi b,.lrow .lt .gi svg{display:none}
+.lrow span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .c{color:var(--winmuted)}
+.lrow svg{width:14px;height:14px;color:var(--accent)}
+.lhead{display:grid;grid-template-columns:34px minmax(0,1fr) 92px 70px 26px;gap:10px;padding:2px 8px 6px;font-size:11px;color:var(--winmuted);font-weight:600;border-bottom:1px solid var(--hair);margin-bottom:4px}
+.sbar2{flex:none;border-top:1px solid var(--hair);padding:6px 14px;font-size:11.5px;color:var(--winmuted);display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.note-row{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--winmuted);background:var(--win2);border:1px solid var(--hair);border-radius:8px;padding:7px 10px;margin-bottom:12px}
+.note-row svg{width:15px;height:15px;flex:none;color:var(--warn)}
+/* iOS chrome */
+.ios-nav{padding:6px 18px 8px;display:flex;flex-direction:column;gap:8px;flex:none}
+.ios-nav .row{display:flex;justify-content:space-between;align-items:center;min-height:30px}
+.ios-nav .back{all:unset;cursor:pointer;color:var(--accent);font-size:15px;display:flex;align-items:center;gap:2px}
+.ios-nav .back svg{width:18px;height:18px}
+.ios-nav h2{font-family:var(--body);font-size:28px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.ios-nav .search{width:auto;height:36px;border-radius:10px;border:0}
+.ios-tabs{flex:none;display:flex;justify-content:space-around;border-top:1px solid var(--hair);padding:7px 0 24px;background:var(--win2)}
+.ios-tabs span{display:flex;flex-direction:column;align-items:center;font-size:10px;gap:2px;color:var(--winmuted)}
+.ios-tabs span.on{color:var(--accent)}
+.ios-tabs svg{width:22px;height:22px}
+.fl{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--hair)}
+.fl svg{width:30px;height:30px;color:#4aa3ff;flex:none}
+.fl b{font-weight:500;font-size:15px;display:block}
+.fl small{color:var(--winmuted);font-size:12px}
+.fl:focus-visible{outline:2px solid var(--accent)}
+.ipad .scr{flex-direction:row}
+.ipad .side{width:230px;flex:none;padding-top:4px}
+.ipad .main .sbar{justify-content:flex-end}
+/* Quick Look */
+.ql{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column}
+.mac .ql{background:var(--scrim);align-items:center;justify-content:center;padding:28px}
+.qlp{background:var(--win);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden;width:100%;max-width:760px;max-height:100%}
+.ios .ql .qlp{border-radius:0;max-width:none;flex:1;box-shadow:none}
+.qlh{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--hair);flex:none}
+.qlh b{flex:1;min-width:0;text-align:center;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qlh .done{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:14px;min-width:44px}
+.qlh .tbtn{min-width:30px}
+.iphone .qlh{padding-top:56px}
+.qlb{position:relative;background:#0d0f14;display:grid;place-items:center;min-height:0;flex:1;overflow:hidden}
+.mac .qlb{flex:none;height:330px}
+.qlb > img,.qlb > canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.qlb.paper{background:var(--win2)}
+.qlb.paper > img{inset:14px;width:calc(100% - 28px);height:calc(100% - 28px);filter:drop-shadow(0 4px 14px rgba(0,0,0,.2))}
+.badge{position:absolute;left:10px;top:10px;display:flex;gap:6px;align-items:center;background:rgba(10,12,18,.72);color:#fff;font-size:11px;font-weight:600;padding:4px 8px;border-radius:7px;backdrop-filter:blur(6px)}
+.badge svg{width:12px;height:12px}
+.badge.r{left:auto;right:10px}
+.ctrls{position:absolute;left:10px;right:10px;bottom:10px;display:flex;align-items:center;gap:10px;background:rgba(10,12,18,.66);color:#fff;border-radius:10px;padding:6px 10px;backdrop-filter:blur(6px)}
+.ctrls button{all:unset;cursor:pointer;width:22px;height:22px;display:grid;place-items:center}
+.ctrls button:focus-visible{outline:2px solid #fff}
+.ctrls svg{width:16px;height:16px}
+.ctrls time{font-size:11px;font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
+.prog{position:relative;flex:1;height:18px;display:flex;align-items:center;cursor:pointer}
+.prog::before{content:"";position:absolute;left:0;right:0;height:4px;border-radius:3px;background:rgba(255,255,255,.3)}
+.prog i{position:absolute;left:0;height:4px;border-radius:3px;background:#fff}
+.prog .tip{position:absolute;bottom:22px;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:3px;pointer-events:none}
+.prog .tip img{width:128px;border-radius:5px;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.prog .tip span{font-size:10px;background:rgba(0,0,0,.7);padding:1px 5px;border-radius:4px}
+.prog.hov .tip{display:flex}
+.strip{display:flex;gap:4px;padding:8px 12px;background:var(--win2);border-top:1px solid var(--hair);overflow-x:auto;flex:none}
+.strip button{all:unset;cursor:pointer;flex:none;border-radius:4px;outline-offset:1px;position:relative}
+.strip img{height:44px;display:block;border-radius:3px}
+.strip button[aria-current="true"]{outline:2px solid var(--accent)}
+.strip button:focus-visible{outline:2px solid var(--accent)}
+.strip .pn{position:absolute;bottom:2px;right:3px;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.6);padding:0 3px;border-radius:3px}
+.qlf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--hair);flex:none}
+.iphone .qlf{padding-bottom:30px}
+.qlf .info{flex:1 1 200px;min-width:0;font-size:12px;color:var(--winmuted);display:flex;flex-direction:column;gap:1px}
+.qlf .info b{color:var(--wink);font-size:12.5px}
+.qlf .lock{display:inline-flex;gap:4px;align-items:center;color:var(--ok);font-weight:600}
+.qlf .lock svg{width:12px;height:12px}
+.btn{all:unset;cursor:pointer;font-weight:600;font-size:12.5px;padding:7px 12px;border-radius:8px;background:var(--win2);border:1px solid var(--hair);white-space:nowrap;text-align:center}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.ok{background:var(--ok);color:#fff;border-color:transparent}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn[disabled]{opacity:.45;cursor:default}
+.dl{display:flex;flex-direction:column;align-items:center;gap:12px;color:#fff;text-align:center;padding:20px;width:100%}
+.dl .gi{width:72px}
+.dl .meter{width:min(320px,80%);height:6px;border-radius:4px;background:rgba(255,255,255,.2);overflow:hidden}
+.dl .meter i{display:block;height:100%;background:#fff;width:0}
+.dl small{color:rgba(255,255,255,.7);font-variant-numeric:tabular-nums}
+.poster{position:relative;display:grid;place-items:center;width:100%;height:100%}
+.poster img{max-width:100%;max-height:100%;filter:saturate(.9)}
+.poster .over{position:absolute;display:flex;flex-direction:column;align-items:center;gap:8px;color:#fff;text-align:center;background:rgba(10,12,18,.7);padding:14px 16px;border-radius:12px;max-width:80%}
+.poster .over small{color:rgba(255,255,255,.75)}
+/* sheets and toasts */
+.sheet{position:absolute;inset:0;z-index:40;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center}
+.mac .sheet{align-items:center}
+.sheet .card{background:var(--win);width:100%;max-width:420px;border-radius:16px 16px 0 0;padding:18px 18px 30px;display:flex;flex-direction:column;gap:10px;box-shadow:0 -10px 30px rgba(0,0,0,.25)}
+.mac .sheet .card,.ipad .sheet .card{border-radius:14px;padding-bottom:18px;margin-bottom:24px}
+.sheet h4{margin:0;font-size:16px}
+.sheet p{margin:0;color:var(--winmuted);font-size:13px}
+.sheet .cost{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px;background:var(--win2);border-radius:10px;padding:10px 12px;font-variant-numeric:tabular-nums}
+.sheet .cost span{color:var(--winmuted)}
+.sheet .meterbar{grid-column:1/-1;height:6px;border-radius:4px;background:var(--hair);overflow:hidden;display:flex}
+.sheet .meterbar i{display:block;height:100%}
+.sheet .acts{display:flex;flex-direction:column;gap:8px}
+.toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:60;background:var(--wink);color:var(--win);font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.25);max-width:86%;text-align:center}
+.toast.ok{background:var(--ok);color:#fff}
+.toast.bad{background:var(--bad);color:#fff}
+.iphone .toast{bottom:96px}
+/* settings */
+.set{position:absolute;inset:0;z-index:30;background:var(--win2);display:flex;flex-direction:column}
+.mac .set{background:var(--scrim);align-items:center;justify-content:center}
+.setp{background:var(--win2);width:100%;max-width:520px;display:flex;flex-direction:column;overflow:auto;flex:1}
+.mac .setp{flex:none;border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.4);max-height:92%}
+.ipad .set{background:var(--scrim);align-items:center;justify-content:center}
+.ipad .setp{flex:none;border-radius:16px;max-height:90%}
+.seth{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--hair);flex:none;background:var(--win)}
+.iphone .seth{padding-top:58px}
+.seth b{font-size:15px}
+.setb{padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px}
+.grp{background:var(--win);border-radius:12px;overflow:hidden}
+.grp .it{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--hair);font-size:13.5px}
+.grp .it:last-child{border-bottom:0}
+.grp .it > div{flex:1;min-width:0}
+.grp .it small{display:block;color:var(--winmuted);font-size:11.5px;line-height:1.35}
+.grp .it .v{color:var(--winmuted);font-variant-numeric:tabular-nums}
+.grp .it .ok{color:var(--ok);font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:4px}
+.grp .it .ok svg{width:13px;height:13px}
+.gcap{font-size:11.5px;color:var(--winmuted);padding:0 14px;margin-top:-8px}
+.ghd{font-size:11.5px;color:var(--winmuted);padding:0 14px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:-8px}
+.sw{all:unset;cursor:pointer;width:46px;height:28px;border-radius:999px;background:var(--hair);position:relative;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.sw[aria-checked="true"]{background:#34c759}
+.sw[aria-checked="true"]::after{left:21px}
+.sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stor{height:10px;border-radius:6px;overflow:hidden;display:flex;background:var(--hair);margin-top:6px}
+.stor i{display:block;height:100%}
+@media (prefers-reduced-motion: reduce){.sw,.sw::after{transition:none}}
+
+/* ---------- screens board ---------- */
+.board{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:16px}
+.board-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-end}
+.board-head h2{font-size:24px}
+.board-head p{margin:4px 0 0;color:var(--muted);max-width:72ch}
+.canvas{overflow-x:auto;padding:12px 4px 8px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:18px 18px;border-radius:12px}
+.frames{display:flex;flex-wrap:wrap;justify-content:center;gap:30px 34px;padding:8px}
+.frame{display:flex;flex-direction:column;gap:10px}
+.frame .lbl{font-size:12px;font-weight:600;color:var(--muted);max-width:440px}
+.frame .lbl b{color:var(--ink);font-family:var(--display);font-size:14px;display:block}
+.frame .shot{pointer-events:none}
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.pr{border:1px solid var(--line);border-radius:12px;padding:14px}
+.pr h3{font-size:15px;margin-bottom:4px}
+.pr p{margin:0;color:var(--muted);font-size:13px}
+footer{color:var(--muted);font-size:12px;text-align:center}
+footer a{color:inherit}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 18h10.5a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.6 9.2 4.5 4.5 0 0 0 7 18Z" fill="#fff"/><rect x="9" y="11" width="6" height="4.5" rx="1" fill="#1d6ef2"/></svg></div>
+      <div><h1>iCloud Live Previews</h1><p>See every file before you download it. A concept for Mac, iPad and iPhone.</p></div>
+    </div>
+    <nav class="tabs" aria-label="Views"><a href="#prototype" id="tab-prototype">Prototype</a><a href="#screens" id="tab-screens">Screens</a></nav>
+  </header>
+
+  <section id="view-prototype">
+    <div class="stage">
+      <aside class="rail" aria-label="Scenarios and controls">
+        <div><div class="eyebrow">Try a task</div><h2>Five people, five folders</h2></div>
+        <div id="scens" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="ctl"><div class="eyebrow">Compare</div>
+          <div class="seg" id="seg-mode"><button data-mode="before">Today's iCloud</button><button data-mode="after">Live Previews</button></div></div>
+        <div class="ctl"><div class="eyebrow">Device</div>
+          <div class="seg" id="seg-dev"><button data-dev="mac">Mac</button><button data-dev="ipad">iPad</button><button data-dev="iphone">iPhone</button></div></div>
+        <div class="ctl"><div class="eyebrow">Network</div>
+          <div class="seg" id="seg-net"><button data-net="wifi">Wi-Fi</button><button data-net="cell">Cellular</button></div></div>
+        <button class="ghostbtn" id="restart">Start the task over</button>
+      </aside>
+
+      <div class="dev-col">
+        <div class="fit" id="fit"><div class="scaler" id="scaler"></div></div>
+        <p class="hint" id="hint"></p>
+      </div>
+
+      <aside class="rail" aria-label="Task scoreboard">
+        <div id="taskcard"></div>
+        <div><div class="eyebrow" style="margin-bottom:4px">This run</div><div id="meters"></div></div>
+        <div><div class="eyebrow" style="margin-bottom:6px">Today vs Live Previews</div><div class="cmp" id="cmp"></div></div>
+        <div><div class="eyebrow" style="margin-bottom:6px">Activity</div><div class="log" id="log" aria-live="polite"></div></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="view-screens" hidden>
+    <div class="board">
+      <div class="board-head">
+        <div><div class="eyebrow">Design board</div><h2>iCloud Live Previews: key screens</h2><p>Nine moments across Mac, iPad and iPhone, from a folder of blank icons to search inside scans. Every frame is drawn by the same code as the live prototype.</p></div>
+        <span class="eyebrow">Concept · not an Apple product</span>
+      </div>
+      <div class="canvas"><div class="frames" id="frames"></div></div>
+      <div class="principles">
+        <div class="pr"><h3>Show the file, not the format</h3><p>Every file carries a real preview that syncs like a name or a date, so a cloud badge never hides what something is.</p></div>
+        <div class="pr"><h3>Download is a choice</h3><p>Opening streams a light preview. The original arrives only when someone asks for it, with its size on the button.</p></div>
+        <div class="pr"><h3>Say the cost first</h3><p>On cellular, the data a download will use is shown against the month's plan before anything moves.</p></div>
+        <div class="pr"><h3>Private by construction</h3><p>Previews are made on the device that saved the file and encrypted with its keys, so Advanced Data Protection still holds.</p></div>
+      </div>
+    </div>
+  </section>
+  <footer>Concept prototype for a product case study. Simulated files and numbers; artwork is generated in the browser. Not affiliated with Apple. <a href="https://claude.ai/artifact/CQggeE6dVgDg4RmF2XUZSg" target="_blank" rel="noopener">Read the PRD</a></footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rng = seed => { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+const hash = s => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const lerp = (a, b, t) => a + (b - a) * t;
+const fmtMB = mb => mb >= 1000 ? (mb >= 10000 ? String(Math.round(mb / 1000)) : (mb / 1000).toFixed(2).replace(/\.?0+$/, '')) + ' GB' : mb >= 10 ? Math.round(mb) + ' MB' : mb >= 1 ? mb.toFixed(1) + ' MB' : mb > 0 ? Math.max(1, Math.round(mb * 1000)) + ' KB' : '0 MB';
+const fmtT = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const clock = () => { const d = new Date(); return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
+/* ================= procedural artwork ================= */
+const HAND = '"Caveat", "Segoe Print", cursive';
+const SANS = 'Inter, system-ui, sans-serif';
+function canvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function grad(x, x0, y0, x1, y1, stops) { const g = x.createLinearGradient(x0, y0, x1, y1); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); return g; }
+function circle(x, cx, cy, r, fill) { x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fillStyle = fill; x.fill(); }
+
+function ferry(x, cx, y, fw, dir, night) {
+  const hh = fw * .12;
+  x.save(); x.translate(cx, y); x.scale(dir, 1);
+  // wake
+  x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = Math.max(1, fw * .012);
+  for (let i = 0; i < 4; i++) { x.beginPath(); x.moveTo(-fw * .5 - i * fw * .12, hh + i * 2); x.lineTo(-fw * .5 - i * fw * .12 - fw * .2, hh + i * 3 + 2); x.stroke(); }
+  x.beginPath(); x.moveTo(-fw * .5, 0); x.lineTo(fw * .56, 0); x.lineTo(fw * .44, hh); x.lineTo(-fw * .46, hh); x.closePath();
+  x.fillStyle = night ? '#3a1e24' : '#b8322f'; x.fill();
+  x.fillStyle = night ? '#d9d9e0' : '#f6f4ef'; x.fillRect(-fw * .5, -hh * .05, fw * 1.04, hh * .35);
+  x.fillStyle = night ? '#c9c9d4' : '#ffffff'; x.fillRect(-fw * .34, -hh * 1.3, fw * .66, hh * 1.3);
+  x.fillRect(-fw * .2, -hh * 2.2, fw * .38, hh * .95);
+  x.fillStyle = night ? '#ffd56a' : '#284866';
+  for (let i = 0; i < 9; i++) x.fillRect(-fw * .3 + i * fw * .068, -hh * .95, fw * .04, hh * .4);
+  for (let i = 0; i < 5; i++) x.fillRect(-fw * .16 + i * fw * .068, -hh * 1.9, fw * .04, hh * .35);
+  x.fillStyle = '#e3a73e'; x.fillRect(-fw * .1, -hh * 3.1, fw * .07, hh * .95);
+  x.fillStyle = '#2a2a2a'; x.fillRect(-fw * .1, -hh * 3.25, fw * .07, hh * .2);
+  x.restore();
+}
+function sailboat(x, cx, y, s) {
+  x.fillStyle = '#2d3b4f'; x.beginPath(); x.moveTo(cx - s, y); x.lineTo(cx + s, y); x.lineTo(cx + s * .7, y + s * .3); x.lineTo(cx - s * .7, y + s * .3); x.fill();
+  x.fillStyle = '#fbfbf7'; x.beginPath(); x.moveTo(cx, y - s * 2.2); x.lineTo(cx, y - s * .1); x.lineTo(cx + s * .9, y - s * .1); x.fill();
+  x.beginPath(); x.moveTo(cx - s * .1, y - s * 1.9); x.lineTo(cx - s * .1, y - s * .1); x.lineTo(cx - s * .8, y - s * .1); x.fill();
+}
+function dHarbor(x, w, h, v, t) {
+  const P = {day: {s: ['#73b2ee', '#d8edfc'], sea: ['#3a80c2', '#173f6e'], hill: '#5f809d'},
+    dusk: {s: ['#2f3c7b', '#f39f69'], sea: ['#5a527d', '#1f2346'], hill: '#3a3460'},
+    night: {s: ['#0a1131', '#1d2b5a'], sea: ['#0f1b3d', '#040917'], hill: '#121a38'}}[v.time];
+  const r = rng(hash(v.seed || 'h')); const hy = h * .56;
+  x.fillStyle = grad(x, 0, 0, 0, hy, P.s); x.fillRect(0, 0, w, hy);
+  if (v.time === 'night') { for (let i = 0; i < 60; i++) circle(x, r() * w, r() * hy * .8, r() * 1.2 + .3, 'rgba(255,255,255,' + (.4 + r() * .5) + ')'); circle(x, w * .76, h * .17, h * .05, '#eef0f8'); }
+  else if (v.time === 'dusk') { circle(x, w * .3, hy - h * .02, h * .12, '#ffd08a'); circle(x, w * .3, hy - h * .02, h * .2, 'rgba(255,200,120,.18)'); }
+  else { circle(x, w * .8, h * .17, h * .2, 'rgba(255,255,230,.25)'); circle(x, w * .8, h * .17, h * .07, '#fff7d8');
+    x.fillStyle = 'rgba(255,255,255,.75)'; for (let i = 0; i < 4; i++) { const cx = (r() * w + t * w * .08) % (w * 1.1), cy = h * (.08 + r() * .2); for (let k = 0; k < 4; k++) circle(x, cx + k * w * .025, cy + (k % 2) * h * .01, h * (.025 + r() * .02), 'rgba(255,255,255,.7)'); } }
+  x.fillStyle = P.hill; x.beginPath(); x.moveTo(0, hy);
+  for (let i = 0; i <= 10; i++) x.lineTo(i * w / 10, hy - h * (.04 + .05 * Math.abs(Math.sin(i * 1.7 + (v.hill || 0)))));
+  x.lineTo(w, hy); x.fill();
+  if (v.time === 'night') for (let i = 0; i < 70; i++) circle(x, r() * w, hy - r() * h * .03, r() * 1.4 + .4, ['#ffd36b', '#fff1c2', '#ff9a6b'][i % 3]);
+  x.fillStyle = grad(x, 0, hy, 0, h, P.sea); x.fillRect(0, hy, w, h - hy);
+  if (v.time !== 'day') { x.fillStyle = v.time === 'dusk' ? 'rgba(255,190,120,.35)' : 'rgba(255,255,255,.18)'; const sx = v.time === 'dusk' ? w * .3 : w * .76;
+    for (let i = 0; i < 14; i++) { const yy = hy + i * h * .03; x.fillRect(sx - w * (.05 - i * .002) + Math.sin(t * 9 + i) * 3, yy, w * (.1 - i * .004), h * .008); } }
+  x.strokeStyle = 'rgba(255,255,255,.22)'; x.lineWidth = Math.max(1, w / 400);
+  for (let i = 0; i < 46; i++) { const yy = hy + Math.pow(r(), 1.4) * (h - hy); const ll = w * (.01 + (yy - hy) / h * .06); const xx = (r() * w + t * w * .06 * (1 + r())) % w; x.beginPath(); x.moveTo(xx, yy); x.lineTo(xx + ll, yy); x.stroke(); }
+  if (v.pier) { x.fillStyle = v.time === 'night' ? '#20212b' : '#5b4636'; x.fillRect(w * .8, hy + h * .1, w * .2, h * .035); for (let i = 0; i < 6; i++) x.fillRect(w * .81 + i * w * .035, hy + h * .1, w * .008, h * .14); }
+  if (v.sail) sailboat(x, w * (.2 + .14 * t), hy + h * .05, w * .035);
+  if (v.ferry) { const fx = v.ferry === 'lr' ? (-.28 + 1.56 * t) * w : (1.28 - 1.56 * t) * w; ferry(x, fx, hy + h * .07, w * .3, v.ferry === 'lr' ? 1 : -1, v.time === 'night'); }
+  if (v.gulls) { x.strokeStyle = v.time === 'night' ? '#cfd6e6' : '#24324a'; x.lineWidth = Math.max(1.2, w / 260); for (let i = 0; i < 4; i++) { const gx = ((.15 + i * .2 + t * .3) % 1.1) * w, gy = h * (.2 + (i % 2) * .08) + Math.sin(t * 20 + i) * h * .01, s = w * .018; x.beginPath(); x.moveTo(gx - s, gy - s * .3); x.quadraticCurveTo(gx - s * .4, gy - s * .7, gx, gy); x.quadraticCurveTo(gx + s * .4, gy - s * .7, gx + s, gy - s * .3); x.stroke(); } }
+}
+function person(x, cx, cy, s, skin, shirt, hair) {
+  x.fillStyle = shirt; x.beginPath(); x.ellipse(cx, cy + s * 1.9, s * 1.6, s * 1.1, 0, Math.PI, 0); x.fill(); x.fillRect(cx - s * 1.6, cy + s * 1.9, s * 3.2, s * 2);
+  x.fillStyle = skin; x.fillRect(cx - s * .32, cy + s * .6, s * .64, s * .6); circle(x, cx, cy, s * .82, skin);
+  x.fillStyle = hair; x.beginPath(); x.arc(cx, cy - s * .1, s * .86, Math.PI * 1.05, Math.PI * 1.95); x.fill();
+}
+function dInterview(x, w, h, v, t) {
+  const r = rng(hash(v.seed));
+  x.fillStyle = grad(x, 0, 0, w, h, v.bg); x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 18; i++) circle(x, r() * w, r() * h * .8, h * (.03 + r() * .07), 'rgba(255,255,255,' + (.05 + r() * .12) + ')');
+  x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(w * .62, h * .2, w * .22, h * .5);
+  person(x, w * (.4 + Math.sin(t * 7) * .004), h * .44, h * .16, v.skin, v.shirt, v.hair);
+  if (v.lower) { x.fillStyle = 'rgba(12,16,26,.78)'; x.fillRect(w * .05, h * .78, w * .44, h * .11); x.fillStyle = '#fff'; x.font = '600 ' + Math.round(h * .045) + 'px ' + SANS; x.fillText(v.lower[0], w * .07, h * .835); x.font = Math.round(h * .032) + 'px ' + SANS; x.fillStyle = '#c9d2e3'; x.fillText(v.lower[1], w * .07, h * .875); }
+}
+function dCity(x, w, h, v, t) {
+  const r = rng(hash(v.seed));
+  x.fillStyle = grad(x, 0, 0, 0, h, ['#9fc4e8', '#f1d9c0']); x.fillRect(0, 0, w, h);
+  const off = t * w * .25;
+  for (let layer = 0; layer < 2; layer++) {
+    const rr = rng(hash(v.seed + layer)); let xx = -off * (layer + 1) * .6 - 20;
+    while (xx < w + 40) { const bw = w * (.04 + rr() * .07), bh = h * (layer ? .3 + rr() * .35 : .2 + rr() * .2);
+      x.fillStyle = layer ? ['#41566f', '#4f6680', '#384a61'][Math.floor(rr() * 3)] : '#8aa2bd'; x.fillRect(xx, h * .72 - bh, bw, bh);
+      if (layer) { x.fillStyle = 'rgba(255,240,200,.5)'; for (let yy = h * .72 - bh + 5; yy < h * .7; yy += h * .04) for (let k = 4; k < bw - 4; k += w * .015) if (rr() > .4) x.fillRect(xx + k, yy, w * .006, h * .015); }
+      xx += bw + w * .006; }
+  }
+  x.fillStyle = grad(x, 0, h * .72, 0, h, ['#4b6e8f', '#2a4462']); x.fillRect(0, h * .72, w, h * .28);
+  x.strokeStyle = 'rgba(255,255,255,.25)'; for (let i = 0; i < 20; i++) { const yy = h * .74 + r() * h * .25, xx = (r() * w - off * .3 + w) % w; x.beginPath(); x.moveTo(xx, yy); x.lineTo(xx + w * .04, yy); x.stroke(); }
+}
+function dStreet(x, w, h, v, t) {
+  const r = rng(hash(v.seed)); const rain = v.rain;
+  x.fillStyle = grad(x, 0, 0, 0, h * .5, rain ? ['#7d8796', '#aab2bd'] : ['#f2c98c', '#f7e6c8']); x.fillRect(0, 0, w, h * .55);
+  let xx = -t * w * .1;
+  const cols = ['#d9634a', '#e5b33c', '#3f8f86', '#c94f7c', '#5b7bc9', '#e08b3d'];
+  while (xx < w) { const bw = w * (.12 + r() * .1), bh = h * (.28 + r() * .2); x.fillStyle = cols[Math.floor(r() * cols.length)]; x.fillRect(xx, h * .55 - bh, bw, bh);
+    x.fillStyle = 'rgba(0,0,0,.18)'; for (let k = 0; k < 3; k++) x.fillRect(xx + bw * .15 + k * bw * .27, h * .55 - bh + bh * .2, bw * .16, bh * .2); xx += bw; }
+  x.fillStyle = rain ? '#4b525c' : '#6b6f75'; x.fillRect(0, h * .55, w, h * .45);
+  x.fillStyle = '#e8e2d0'; for (let i = 0; i < 6; i++) x.fillRect(((i * .2 - t * .5) % 1.2 + 1.2) % 1.2 * w - w * .1, h * .78, w * .08, h * .015);
+  // rickshaws and cars
+  for (let i = 0; i < 3; i++) { const cx = ((i * .38 + t * (.25 + i * .1)) % 1.3) * w - w * .15, cy = h * (.66 + i * .07), s = w * (.06 + i * .01);
+    x.fillStyle = ['#2e7d4f', '#c0392b', '#1f5fa8'][i]; x.fillRect(cx - s, cy - s * .8, s * 2, s * .8); x.fillStyle = '#f4d35e'; x.beginPath(); x.arc(cx, cy - s * .8, s, Math.PI, 0); x.fill();
+    circle(x, cx - s * .7, cy, s * .28, '#1a1a1a'); circle(x, cx + s * .7, cy, s * .28, '#1a1a1a'); }
+  if (rain) { x.strokeStyle = 'rgba(220,230,245,.5)'; x.lineWidth = 1; for (let i = 0; i < 120; i++) { const px = r() * w, py = (r() * h + t * h * 3) % h; x.beginPath(); x.moveTo(px, py); x.lineTo(px - 3, py + h * .04); x.stroke(); } }
+}
+function gear(x, cx, cy, rr, teeth, rot, col) {
+  x.save(); x.translate(cx, cy); x.rotate(rot); x.fillStyle = col; x.beginPath();
+  for (let i = 0; i < teeth * 2; i++) { const a = i / (teeth * 2) * Math.PI * 2, R = i % 2 ? rr : rr * 1.12; x.lineTo(Math.cos(a) * R, Math.sin(a) * R); }
+  x.fill(); circle(x, 0, 0, rr * .55, 'rgba(0,0,0,.35)'); circle(x, 0, 0, rr * .18, '#bfc5cc'); x.restore();
+}
+function dChain(x, w, h, v, t) {
+  x.fillStyle = grad(x, 0, 0, 0, h, ['#5c5f63', '#2f3134']); x.fillRect(0, 0, w, h);
+  const r = rng(hash(v.seed)); for (let i = 0; i < 300; i++) { x.fillStyle = 'rgba(255,255,255,' + r() * .06 + ')'; x.fillRect(r() * w, r() * h, 2, 2); }
+  // wheel
+  const wx = w * .78, wy = h * .5, wr = h * .52; x.strokeStyle = '#151515'; x.lineWidth = h * .05; x.beginPath(); x.arc(wx, wy, wr, 0, Math.PI * 2); x.stroke();
+  x.strokeStyle = '#a9b0b8'; x.lineWidth = 1.5; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + (v.broken ? 0 : t * 6); x.beginPath(); x.moveTo(wx, wy); x.lineTo(wx + Math.cos(a) * wr, wy + Math.sin(a) * wr); x.stroke(); }
+  // frame tube
+  x.strokeStyle = v.frame; x.lineWidth = h * .07; x.beginPath(); x.moveTo(w * .1, h * .3); x.lineTo(w * .74, h * .5); x.stroke();
+  const gx = w * .3, gy = h * .56, gr = h * .2; const rot = v.broken ? .2 : t * 10;
+  gear(x, gx, gy, gr, 22, rot, '#c6ccd3'); gear(x, wx, wy, h * .09, 12, rot * 1.8, '#c6ccd3');
+  x.strokeStyle = '#7f858c'; x.lineWidth = h * .022; x.setLineDash([h * .022, h * .012]);
+  x.beginPath(); x.moveTo(gx, gy - gr * 1.08); x.lineTo(wx, wy - h * .1); x.stroke();
+  if (v.broken) { const sway = Math.sin(t * 8) * h * .04; x.beginPath(); x.moveTo(gx, gy + gr * 1.08); x.quadraticCurveTo(gx + w * .12, gy + gr * 1.7 + sway, gx + w * .2, h * .97 + sway * .3); x.stroke();
+    x.beginPath(); x.moveTo(wx, wy + h * .1); x.quadraticCurveTo(wx - w * .1, h * .85, wx - w * .16, h * .99); x.stroke(); }
+  else { x.beginPath(); x.moveTo(gx, gy + gr * 1.08); x.lineTo(wx, wy + h * .1); x.stroke(); }
+  x.setLineDash([]);
+}
+function dMarket(x, w, h, v, t) {
+  const r = rng(hash(v.seed)); x.fillStyle = grad(x, 0, 0, 0, h, ['#f7e3c3', '#e9c99a']); x.fillRect(0, 0, w, h);
+  const aw = ['#d94f3d', '#2f8f6b', '#e2a531', '#3a6fb5'];
+  for (let i = 0; i < 4; i++) { const sx = i * w * .26 - t * w * .05; x.fillStyle = aw[i]; x.beginPath(); x.moveTo(sx, h * .15); x.lineTo(sx + w * .24, h * .15); x.lineTo(sx + w * .26, h * .32); x.lineTo(sx - w * .02, h * .32); x.fill();
+    x.fillStyle = 'rgba(255,255,255,.35)'; for (let k = 0; k < 4; k++) x.fillRect(sx + k * w * .06, h * .15, w * .03, h * .17);
+    x.fillStyle = '#8a5a35'; x.fillRect(sx, h * .62, w * .24, h * .06);
+    for (let k = 0; k < 14; k++) circle(x, sx + w * .02 + (k % 7) * w * .03, h * .58 - Math.floor(k / 7) * h * .05, h * .028, ['#e94b35', '#f2a33a', '#7dbb44', '#f6d54a'][(i + k) % 4]); }
+  person(x, w * (.55 + t * .2), h * .6, h * .1, '#8d5a3c', '#e7e2d8', '#1d1d1d');
+}
+function dTea(x, w, h, v, t) {
+  x.fillStyle = grad(x, 0, 0, w, h, ['#3b2a20', '#6e4a31']); x.fillRect(0, 0, w, h);
+  x.fillStyle = '#9c6b45'; x.fillRect(0, h * .62, w, h * .38);
+  x.fillStyle = '#f2ece2'; x.beginPath(); x.ellipse(w * .5, h * .72, w * .16, h * .05, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#ffffff'; x.beginPath(); x.moveTo(w * .41, h * .4); x.lineTo(w * .59, h * .4); x.lineTo(w * .56, h * .7); x.lineTo(w * .44, h * .7); x.fill();
+  x.fillStyle = '#b8752f'; x.beginPath(); x.ellipse(w * .5, h * .41, w * .085, h * .02, 0, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,.4)'; x.lineWidth = w * .008; for (let i = 0; i < 3; i++) { x.beginPath(); const sx = w * (.47 + i * .03); x.moveTo(sx, h * .37); x.bezierCurveTo(sx - w * .03, h * (.3 - t * .05), sx + w * .03, h * .22, sx, h * (.12 + Math.sin(t * 6 + i) * .02)); x.stroke(); }
+}
+function dScan(x, w, h, v) {
+  const r = rng(hash(v.seed)); const b = w * .055;
+  x.fillStyle = '#f4efe3'; x.fillRect(0, 0, w, h);
+  const iw = w - b * 2, ih = h - b * 3.2; x.save(); x.translate(b, b);
+  x.fillStyle = grad(x, 0, 0, 0, ih, ['#d9c3a0', '#a98a63']); x.fillRect(0, 0, iw, ih);
+  x.beginPath(); x.rect(0, 0, iw, ih); x.clip();
+  const ink = '#4a3a2a', light = '#efe3cc', mid = '#7a6248';
+  const fig = (cx, base, s, dress) => { x.fillStyle = dress || ink; if (dress === light) { x.beginPath(); x.moveTo(cx - s * .7, base); x.lineTo(cx + s * .7, base); x.lineTo(cx + s * .2, base - s * 1.6); x.lineTo(cx - s * .2, base - s * 1.6); x.fill(); } else x.fillRect(cx - s * .32, base - s * 1.7, s * .64, s * 1.7); circle(x, cx, base - s * 1.95, s * .26, '#6b5238'); };
+  const gy = ih * .78;
+  if (v.k === 'beach') { x.fillStyle = '#c7b08a'; x.fillRect(0, ih * .45, iw, ih * .2); x.fillStyle = '#e6d6b6'; x.fillRect(0, ih * .62, iw, ih); fig(iw * .35, gy, ih * .17); fig(iw * .52, gy + 4, ih * .13); x.fillStyle = mid; x.beginPath(); x.arc(iw * .8, ih * .4, iw * .12, Math.PI, 0); x.fill(); x.fillRect(iw * .8, ih * .4, 3, ih * .4); }
+  if (v.k === 'wedding') { x.strokeStyle = light; x.lineWidth = iw * .03; x.beginPath(); x.arc(iw * .5, ih * .5, iw * .25, Math.PI, 0); x.stroke(); x.fillStyle = light; x.fillRect(iw * .235, ih * .5, iw * .03, ih * .4); x.fillRect(iw * .735, ih * .5, iw * .03, ih * .4); fig(iw * .44, gy, ih * .22); fig(iw * .56, gy, ih * .21, light); for (let i = 0; i < 9; i++) circle(x, iw * (.28 + i * .055), ih * .26 + Math.sin(i) * ih * .03, iw * .018, '#f6ecd8'); }
+  if (v.k === 'car') { x.fillStyle = mid; x.fillRect(0, ih * .7, iw, ih); x.fillStyle = ink; x.beginPath(); x.moveTo(iw * .15, ih * .7); x.lineTo(iw * .2, ih * .5); x.lineTo(iw * .6, ih * .5); x.lineTo(iw * .7, ih * .6); x.lineTo(iw * .85, ih * .62); x.lineTo(iw * .86, ih * .72); x.lineTo(iw * .15, ih * .72); x.fill(); circle(x, iw * .3, ih * .74, ih * .07, '#2e241a'); circle(x, iw * .72, ih * .74, ih * .07, '#2e241a'); x.fillStyle = light; x.fillRect(iw * .26, ih * .53, iw * .14, ih * .07); x.fillRect(iw * .43, ih * .53, iw * .14, ih * .07); fig(iw * .1, gy + 6, ih * .16); fig(iw * .92, gy + 6, ih * .16); }
+  if (v.k === 'house') { x.fillStyle = light; x.fillRect(iw * .25, ih * .35, iw * .5, ih * .4); x.fillStyle = mid; x.beginPath(); x.moveTo(iw * .2, ih * .36); x.lineTo(iw * .5, ih * .12); x.lineTo(iw * .8, ih * .36); x.fill(); x.fillStyle = ink; x.fillRect(iw * .46, ih * .55, iw * .08, ih * .2); fig(iw * .3, gy + 8, ih * .14); fig(iw * .66, gy + 8, ih * .15); fig(iw * .76, gy + 8, ih * .1); }
+  if (v.k === 'birthday') { x.fillStyle = mid; x.fillRect(iw * .1, ih * .6, iw * .8, ih * .1); x.fillStyle = light; x.fillRect(iw * .4, ih * .48, iw * .2, ih * .12); for (let i = 0; i < 5; i++) { x.fillStyle = '#fff6e0'; x.fillRect(iw * (.42 + i * .04), ih * .41, 3, ih * .07); circle(x, iw * (.42 + i * .04) + 1.5, ih * .4, 3, '#fff2c0'); } fig(iw * .2, ih * .6, ih * .12); fig(iw * .78, ih * .6, ih * .13); fig(iw * .5, ih * .44, ih * .08); }
+  if (v.k === 'portrait') { x.fillStyle = grad(x, 0, 0, iw, ih, ['#cdb38c', '#8f7454']); x.fillRect(0, 0, iw, ih); person(x, iw * .5, ih * .4, ih * .17, '#e2cdaa', ink, '#3a2c1f'); }
+  if (v.k === 'group') { x.fillStyle = mid; x.fillRect(0, ih * .75, iw, ih); for (let i = 0; i < 6; i++) fig(iw * (.13 + i * .15), gy + (i % 2) * 4, ih * (.15 + (i % 3) * .02), i % 2 ? light : ink); }
+  if (v.k === 'garden') { for (let i = 0; i < 5; i++) circle(x, iw * (.1 + i * .2), ih * .32 + (i % 2) * 10, ih * .17, i % 2 ? '#6e5a3f' : '#5b4a33'); x.fillStyle = '#8a7151'; x.fillRect(0, ih * .62, iw, ih); x.fillStyle = ink; x.fillRect(iw * .36, ih * .66, iw * .28, ih * .05); fig(iw * .5, ih * .67, ih * .13); }
+  if (v.k === 'grad') { x.fillStyle = light; for (let i = 0; i < 5; i++) x.fillRect(iw * (.12 + i * .18), ih * .12, iw * .05, ih * .62); x.fillRect(iw * .08, ih * .08, iw * .84, ih * .06); fig(iw * .5, gy, ih * .2); x.fillStyle = '#1e1710'; x.fillRect(iw * .5 - ih * .09, gy - ih * .2 * 2.28, ih * .18, ih * .03); }
+  for (let i = 0; i < 1600; i++) { x.fillStyle = 'rgba(40,25,10,' + r() * .12 + ')'; x.fillRect(r() * iw, r() * ih, 1.4, 1.4); }
+  const vg = x.createRadialGradient(iw / 2, ih / 2, ih * .2, iw / 2, ih / 2, iw * .75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(40,20,0,.45)'); x.fillStyle = vg; x.fillRect(0, 0, iw, ih);
+  x.restore();
+  x.fillStyle = '#3c3a6e'; x.font = '700 ' + Math.round(h * .085) + 'px ' + HAND; x.textAlign = 'left'; x.fillText(v.cap, b * 1.2, h - b * .65);
+}
+const INK = '#29406a';
+function titleBlock(x, w, h, sheet, title, rev, stamp) {
+  const bw = w * .26, bh = h * .2, bx = w - bw - w * .03, by = h - bh - h * .04;
+  x.strokeStyle = INK; x.lineWidth = Math.max(1, w / 500); x.strokeRect(bx, by, bw, bh);
+  x.beginPath(); x.moveTo(bx, by + bh * .3); x.lineTo(bx + bw, by + bh * .3); x.moveTo(bx, by + bh * .62); x.lineTo(bx + bw, by + bh * .62); x.moveTo(bx + bw * .6, by + bh * .62); x.lineTo(bx + bw * .6, by + bh); x.stroke();
+  x.fillStyle = INK; x.font = '700 ' + Math.round(bh * .15) + 'px ' + SANS; x.fillText('KYOTO CITY LIBRARY', bx + bw * .05, by + bh * .21);
+  x.font = '500 ' + Math.round(bh * .14) + 'px ' + SANS; x.fillText(title, bx + bw * .05, by + bh * .5);
+  x.font = '700 ' + Math.round(bh * .27) + 'px ' + SANS; x.fillText(sheet, bx + bw * .05, by + bh * .92);
+  x.font = '600 ' + Math.round(bh * .13) + 'px ' + SANS; x.fillText(rev, bx + bw * .65, by + bh * .86);
+  if (stamp) { x.save(); x.translate(w * .45, h * .45); x.rotate(-.32); x.strokeStyle = '#c8372d'; x.fillStyle = '#c8372d'; x.lineWidth = w / 160; x.font = '800 ' + Math.round(h * .1) + 'px ' + SANS; x.textAlign = 'center'; const tw = x.measureText('SUPERSEDED').width; x.strokeRect(-tw / 2 - 14, -h * .1, tw + 28, h * .14); x.fillText('SUPERSEDED', 0, h * .01); x.restore(); }
+}
+function dSheet(x, w, h, v) {
+  x.fillStyle = '#fbfcfe'; x.fillRect(0, 0, w, h);
+  x.strokeStyle = INK; x.lineWidth = Math.max(1, w / 400); x.strokeRect(w * .025, h * .035, w * .95, h * .93);
+  const L = Math.max(1, w / 600); x.lineWidth = L; x.strokeStyle = INK; x.fillStyle = INK;
+  const dx = w * .07, dy = h * .1, dw = w * .6, dh = h * .62; const k = v.k;
+  if (k === 'cover') { x.font = '800 ' + Math.round(h * .08) + 'px ' + SANS; x.fillText('KYOTO CITY', dx, h * .3); x.fillText('LIBRARY', dx, h * .4); x.font = '500 ' + Math.round(h * .035) + 'px ' + SANS; x.fillText(v.sub, dx, h * .5); for (let i = 0; i < 8; i++) x.fillRect(dx, h * (.58 + i * .035), w * .3 * (.5 + (i * 37 % 10) / 20), h * .01); }
+  if (k === 'site') { x.beginPath(); x.moveTo(dx, dy + dh * .2); x.lineTo(dx + dw * .9, dy); x.lineTo(dx + dw, dy + dh * .8); x.lineTo(dx + dw * .1, dy + dh); x.closePath(); x.setLineDash([8, 5]); x.stroke(); x.setLineDash([]); x.strokeRect(dx + dw * .3, dy + dh * .3, dw * .4, dh * .35); for (let i = 0; i < 18; i++) { x.beginPath(); x.moveTo(dx + dw * .3 + i * dw * .022, dy + dh * .3); x.lineTo(dx + dw * .3, dy + dh * .3 + i * dh * .02); x.stroke(); } for (let i = 0; i < 9; i++) { x.beginPath(); x.arc(dx + dw * (.1 + (i * .1)), dy + dh * (.85 - (i % 3) * .05), w * .014, 0, 7); x.stroke(); } }
+  if (k === 'plan' || k === 'plan2') { const cols = k === 'plan' ? [.25, .5, .75] : [.33, .66]; x.lineWidth = L * 3; x.strokeRect(dx, dy, dw, dh); x.lineWidth = L * 1.6; cols.forEach(c => { x.beginPath(); x.moveTo(dx + dw * c, dy); x.lineTo(dx + dw * c, dy + dh * .55); x.stroke(); }); x.beginPath(); x.moveTo(dx, dy + dh * .55); x.lineTo(dx + dw, dy + dh * .55); x.stroke(); x.lineWidth = L; cols.forEach(c => { x.beginPath(); x.arc(dx + dw * c - 2, dy + dh * .55, dh * .07, Math.PI, Math.PI * 1.5); x.stroke(); }); ['A', 'B', 'C', 'D'].forEach((g, i) => { x.beginPath(); x.arc(dx + dw * i / 3, dy - h * .035, h * .022, 0, 7); x.stroke(); x.font = '600 ' + Math.round(h * .024) + 'px ' + SANS; x.textAlign = 'center'; x.fillText(g, dx + dw * i / 3, dy - h * .027); x.textAlign = 'left'; }); for (let i = 0; i < 12; i++) x.strokeRect(dx + dw * (.05 + (i % 6) * .15), dy + dh * (.66 + Math.floor(i / 6) * .14), dw * .1, dh * .08); }
+  if (k === 'elev' || k === 'elev2') { x.lineWidth = L * 2.5; x.beginPath(); x.moveTo(dx - 10, dy + dh); x.lineTo(dx + dw + 10, dy + dh); x.stroke(); x.lineWidth = L * 1.4; x.strokeRect(dx, dy + dh * .2, dw, dh * .8); x.beginPath(); x.moveTo(dx - dw * .03, dy + dh * .2); x.lineTo(dx + dw * .5, dy + (k === 'elev' ? 0 : dh * .08)); x.lineTo(dx + dw * 1.03, dy + dh * .2); x.stroke(); x.lineWidth = L; const n = k === 'elev' ? 9 : 6; for (let r = 0; r < 3; r++) for (let c = 0; c < n; c++) x.strokeRect(dx + dw * (.04 + c * .96 / n), dy + dh * (.3 + r * .23), dw * .6 / n, dh * .14); }
+  if (k === 'section' || k === 'section2') { x.fillStyle = INK; const lv = [1, .66, .33, .05]; lv.forEach(l => x.fillRect(dx, dy + dh * l, dw, dh * .035)); x.fillRect(dx, dy + dh * .05, dw * .03, dh * .98); x.fillRect(dx + dw * .97, dy + dh * .05, dw * .03, dh * .98); x.lineWidth = L * 1.2;
+    if (k === 'section') { for (let i = 0; i < 2; i++) { x.beginPath(); let sx = dx + dw * .55, sy = dy + dh * (lv[i] - .005); x.moveTo(sx, sy); for (let s = 0; s < 8; s++) { sx += dw * .022; x.lineTo(sx, sy); sy -= dh * .041; x.lineTo(sx, sy); } x.stroke(); } x.fillStyle = 'rgba(41,64,106,.12)'; x.fillRect(dx + dw * .03, dy + dh * .085, dw * .45, dh * .9); }
+    else { x.fillStyle = 'rgba(41,64,106,.12)'; x.fillRect(dx + dw * .5, dy + dh * .085, dw * .47, dh * .9); x.beginPath(); x.moveTo(dx + dw * .1, dy + dh * .05); x.lineTo(dx + dw * .3, dy - dh * .06); x.lineTo(dx + dw * .5, dy + dh * .05); x.stroke(); }
+    x.fillStyle = INK; x.font = '600 ' + Math.round(h * .022) + 'px ' + SANS; [['L1 ±0.000', 1], ['L2 +4.200', .66], ['L3 +8.400', .33], ['Roof +12.600', .05]].forEach(([t, l]) => x.fillText(t, dx + dw + w * .015, dy + dh * l - h * .008)); }
+  if (k === 'detail') { for (let i = 0; i < 3; i++) { const cx = dx + dw * (.18 + i * .32), cy = dy + dh * .45, rr = dh * .26; x.beginPath(); x.arc(cx, cy, rr, 0, 7); x.stroke(); x.save(); x.beginPath(); x.arc(cx, cy, rr, 0, 7); x.clip(); x.fillStyle = 'rgba(41,64,106,.18)'; x.fillRect(cx - rr, cy - rr * .1, rr * 2, rr * .3); for (let j = 0; j < 10; j++) { x.beginPath(); x.moveTo(cx - rr + j * rr * .25, cy - rr * .1); x.lineTo(cx - rr + j * rr * .25 + rr * .3, cy + rr * .2); x.stroke(); } x.restore(); x.font = '700 ' + Math.round(h * .03) + 'px ' + SANS; x.fillStyle = INK; x.fillText(String(i + 1), cx - 5, cy + rr + h * .05); } }
+  if (k === 'struct') { for (let c = 0; c < 6; c++) for (let r = 0; r < 4; r++) { x.fillRect(dx + dw * c / 5 - 5, dy + dh * r / 3 - 5, 10, 10); } x.lineWidth = L * 1.4; for (let c = 0; c < 6; c++) { x.beginPath(); x.moveTo(dx + dw * c / 5, dy); x.lineTo(dx + dw * c / 5, dy + dh); x.stroke(); } for (let r = 0; r < 4; r++) { x.beginPath(); x.moveTo(dx, dy + dh * r / 3); x.lineTo(dx + dw, dy + dh * r / 3); x.stroke(); } }
+  if (k !== 'cover') { x.fillStyle = INK; x.font = '700 ' + Math.round(h * .03) + 'px ' + SANS; x.fillText(v.title.toUpperCase(), dx, h * .9); x.font = '500 ' + Math.round(h * .022) + 'px ' + SANS; x.fillText('SCALE 1:100', dx, h * .935); }
+  titleBlock(x, w, h, v.sheet, v.title, v.rev, v.stamp);
+}
+function dSlide(x, w, h, v) {
+  const dark = v.dark; x.fillStyle = dark ? '#16243a' : '#ffffff'; x.fillRect(0, 0, w, h);
+  x.fillStyle = dark ? '#2e9e8f' : '#1f5fa8'; x.fillRect(0, 0, w, h * .055);
+  x.fillStyle = '#fff'; x.font = '600 ' + Math.round(h * .032) + 'px ' + SANS; x.fillText('BIO 201 · ' + v.lec, w * .03, h * .039);
+  x.fillStyle = dark ? '#ffffff' : '#132033'; x.font = '700 ' + Math.round(h * .072) + 'px ' + SANS; x.fillText(v.title, w * .05, h * .19);
+  x.font = Math.round(h * .045) + 'px ' + SANS; x.fillStyle = dark ? '#c3cfdf' : '#3b4a5e';
+  v.bul.forEach((b, i) => { circle(x, w * .065, h * (.31 + i * .1) - h * .014, h * .009, dark ? '#2e9e8f' : '#1f5fa8'); x.fillText(b, w * .085, h * (.31 + i * .1)); });
+  const cx = w * .76, cy = h * .58;
+  if (v.d2 === 'mito') { x.fillStyle = '#f2a65a'; x.beginPath(); x.ellipse(cx, cy, w * .17, h * .2, -.3, 0, 7); x.fill(); x.fillStyle = '#fbe0bf'; x.beginPath(); x.ellipse(cx, cy, w * .145, h * .16, -.3, 0, 7); x.fill(); x.strokeStyle = '#d9772b'; x.lineWidth = h * .012; x.beginPath(); for (let i = 0; i <= 12; i++) { const px = cx - w * .12 + i * w * .02, py = cy + (i % 2 ? -1 : 1) * h * .1 - (px - cx) * .3; i ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke(); }
+  if (v.d2 === 'cell') { circle(x, cx, cy, h * .26, '#bfe3d2'); circle(x, cx, cy, h * .24, '#e7f6ee'); circle(x, cx + w * .02, cy - h * .02, h * .08, '#7c6bd6'); for (let i = 0; i < 9; i++) circle(x, cx + Math.cos(i) * h * .16, cy + Math.sin(i * 1.3) * h * .14, h * .015, '#3f9e72'); }
+  if (v.d2 === 'ribo') { for (let i = 0; i < 7; i++) { circle(x, cx - w * .12 + i * w * .04, cy, h * .03, '#8a62c9'); circle(x, cx - w * .12 + i * w * .04, cy - h * .035, h * .02, '#b593e6'); } x.strokeStyle = '#e8584a'; x.lineWidth = h * .01; x.beginPath(); x.moveTo(cx - w * .16, cy + h * .04); x.lineTo(cx + w * .16, cy + h * .04); x.stroke(); }
+  if (v.d2 === 'leaf') { x.fillStyle = '#5fae4f'; x.beginPath(); x.ellipse(cx, cy, w * .15, h * .2, .6, 0, 7); x.fill(); x.strokeStyle = '#2f7a33'; x.lineWidth = h * .01; x.beginPath(); x.moveTo(cx - w * .1, cy + h * .14); x.lineTo(cx + w * .1, cy - h * .14); x.stroke(); circle(x, cx + w * .12, cy - h * .3, h * .06, '#f6c945'); }
+  if (v.d2 === 'cycle') { x.strokeStyle = dark ? '#5ad0bf' : '#1f5fa8'; x.lineWidth = h * .02; for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(cx, cy, h * .2, i * Math.PI / 2 + .15, (i + 1) * Math.PI / 2 - .15); x.stroke(); } ['G1', 'S', 'G2', 'M'].forEach((t, i) => { x.fillStyle = dark ? '#fff' : '#132033'; x.font = '700 ' + Math.round(h * .045) + 'px ' + SANS; x.textAlign = 'center'; x.fillText(t, cx + Math.cos(i * Math.PI / 2 + Math.PI / 4) * h * .29, cy + Math.sin(i * Math.PI / 2 + Math.PI / 4) * h * .29 + h * .015); x.textAlign = 'left'; }); }
+  if (v.d2 === 'curve') { x.strokeStyle = dark ? '#9fb3cc' : '#7a889b'; x.lineWidth = 2; x.beginPath(); x.moveTo(cx - w * .16, cy - h * .22); x.lineTo(cx - w * .16, cy + h * .2); x.lineTo(cx + w * .17, cy + h * .2); x.stroke(); x.strokeStyle = '#e8584a'; x.lineWidth = h * .012; x.beginPath(); for (let i = 0; i <= 30; i++) { const s = i / 30; x.lineTo(cx - w * .16 + s * w * .33, cy + h * .2 - (s * 3 / (1 + s * 3)) * h * .36); } x.stroke(); }
+}
+function dDoc(x, w, h, v) {
+  const r = rng(hash(v.seed));
+  if (v.hand) { x.fillStyle = '#fffdf6'; x.fillRect(0, 0, w, h); x.strokeStyle = '#bcd3ef'; x.lineWidth = 1; for (let y = h * .12; y < h; y += h * .045) { x.beginPath(); x.moveTo(0, y); x.lineTo(w, y); x.stroke(); } x.strokeStyle = '#f2a1a1'; x.beginPath(); x.moveTo(w * .12, 0); x.lineTo(w * .12, h); x.stroke();
+    x.fillStyle = '#23325c'; x.font = '700 ' + Math.round(h * .05) + 'px ' + HAND; x.fillText(v.title, w * .15, h * .11); x.font = '500 ' + Math.round(h * .036) + 'px ' + HAND; v.lines.forEach((l, i) => x.fillText(l, w * .15, h * (.2 + i * .09))); return; }
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h);
+  x.fillStyle = '#16202e'; x.font = '700 ' + Math.round(h * .042) + 'px ' + SANS; x.fillText(v.title, w * .1, h * .1);
+  x.font = Math.round(h * .022) + 'px ' + SANS; x.fillStyle = '#6a7486'; x.fillText(v.sub || '', w * .1, h * .14);
+  if (v.table) { x.strokeStyle = '#cfd6e2'; for (let i = 0; i < 12; i++) { const y = h * (.2 + i * .055); x.strokeRect(w * .1, y, w * .8, h * .055); x.fillStyle = '#9aa4b6'; x.fillRect(w * .12, y + h * .02, w * .06, h * .014); x.fillRect(w * .22, y + h * .02, w * (.2 + r() * .3), h * .014); } return; }
+  for (let i = 0; i < 22; i++) { const y = h * (.2 + i * .034); if (i % 6 === 5) continue; x.fillStyle = '#c3cad6'; x.fillRect(w * .1, y, w * (i % 6 === 4 ? .45 + r() * .2 : .74 + r() * .06), h * .012); }
+  if (v.chart) { x.fillStyle = '#e7edf6'; x.fillRect(w * .1, h * .62, w * .8, h * .22); for (let i = 0; i < 7; i++) { x.fillStyle = '#1f5fa8'; const bh = h * (.04 + r() * .15); x.fillRect(w * (.15 + i * .1), h * .82 - bh, w * .06, bh); } }
+}
+function dReceipt(x, w, h) {
+  x.fillStyle = grad(x, 0, 0, w, h, ['#6d5a49', '#3d322a']); x.fillRect(0, 0, w, h);
+  x.save(); x.translate(w * .5, h * .5); x.rotate(-.08); x.fillStyle = '#f6f3ea'; x.fillRect(-w * .2, -h * .44, w * .4, h * .88);
+  x.fillStyle = '#2b2b2b'; x.font = '700 ' + Math.round(h * .05) + 'px ' + SANS; x.textAlign = 'center'; x.fillText('RAHMAN CYCLE', 0, -h * .33);
+  x.font = Math.round(h * .032) + 'px ' + SANS; x.fillText('Mirpur 10, Dhaka', 0, -h * .27); x.textAlign = 'left';
+  ['Chain (KMC)', 'Labour', 'Brake pad'].forEach((t, i) => { x.fillText(t, -w * .17, -h * (.15 - i * .07)); x.textAlign = 'right'; x.fillText(['380', '120', '90'][i], w * .17, -h * (.15 - i * .07)); x.textAlign = 'left'; });
+  x.font = '700 ' + Math.round(h * .04) + 'px ' + SANS; x.fillText('TOTAL Tk', -w * .17, h * .12); x.textAlign = 'right'; x.fillText('590', w * .17, h * .12); x.restore();
+}
+function draw(x, w, h, spec, t) {
+  ({harbor: dHarbor, interview: dInterview, city: dCity, street: dStreet, chain: dChain, market: dMarket, tea: dTea, scan: dScan, sheet: dSheet, slide: dSlide, doc: dDoc, receipt: dReceipt})[spec.d](x, w, h, spec, t || 0);
+}
+function render(spec, w, h, t, q) { const c = canvas(w, h); draw(c.getContext('2d'), w, h, spec, t); return c.toDataURL('image/jpeg', q || .86); }
+
+/* ================= data ================= */
+const MB = 1, GB = 1000;
+const FOLDERS = [
+  {id: 'harbor', name: 'Harbor Films · Client', short: 'Harbor Films'},
+  {id: 'scans', name: 'Family Scans', short: 'Family Scans'},
+  {id: 'phone', name: 'Phone Videos', short: 'Phone Videos'},
+  {id: 'kyoto', name: 'Kyoto Library · Drawings', short: 'Kyoto Library'},
+  {id: 'bio', name: 'Bio 201', short: 'Bio 201'}
+];
+const H = (o) => Object.assign({d: 'harbor', time: 'day', pier: true}, o);
+const SHEETS4 = [
+  ['cover', 'A-000', 'Cover sheet'], ['site', 'A-101', 'Site plan'], ['plan', 'A-102', 'Ground floor plan'], ['plan2', 'A-103', 'Upper floor plan'],
+  ['elev', 'A-201', 'North and south elevations'], ['section', 'A-301', 'Section A-A'], ['section2', 'A-302', 'Section B-B'], ['detail', 'A-501', 'Facade details']];
+const sheetSpecs = (rev, stamp) => SHEETS4.map(([k, s, t]) => ({d: 'sheet', k, sheet: s, title: t, rev, stamp: stamp && k === 'cover', sub: 'Issued for construction · ' + rev}));
+const FILES = [
+  // Daniel
+  {id: 'h12', f: 'harbor', name: 'HRB_0412.MOV', kind: 'video', size: 1.42 * GB, dur: 48, spec: H({time: 'dusk', ferry: 'rl', seed: 'a'}), date: 'Nov 3, 2026'},
+  {id: 'h13', f: 'harbor', name: 'HRB_0413.MOV', kind: 'video', size: 1.18 * GB, dur: 39, spec: H({sail: true, gulls: true, seed: 'b', hill: 1}), date: 'Nov 3, 2026'},
+  {id: 'h14', f: 'harbor', name: 'HRB_0414.MOV', kind: 'video', size: 2.05 * GB, dur: 72, spec: {d: 'interview', seed: 'c', bg: ['#2f4a63', '#8aa7bf'], skin: '#b07a55', shirt: '#2a3f57', hair: '#1c1714', lower: ['Mara Okafor', 'Harbor master']}, date: 'Nov 3, 2026'},
+  {id: 'h15', f: 'harbor', name: 'HRB_0415.MOV', kind: 'video', size: 1.66 * GB, dur: 55, spec: H({gulls: true, seed: 'd', hill: 2}), date: 'Nov 3, 2026'},
+  {id: 'h16', f: 'harbor', name: 'HRB_0416.MOV', kind: 'video', size: .98 * GB, dur: 31, spec: {d: 'city', seed: 'e'}, date: 'Nov 4, 2026'},
+  {id: 'h17', f: 'harbor', name: 'HRB_0417.MOV', kind: 'video', size: 1.37 * GB, dur: 44, spec: H({ferry: 'lr', gulls: true, seed: 'f', hill: 3}), date: 'Nov 4, 2026'},
+  {id: 'h18', f: 'harbor', name: 'HRB_0418.MOV', kind: 'video', size: 1.51 * GB, dur: 50, spec: H({time: 'night', ferry: 'lr', seed: 'g'}), date: 'Nov 4, 2026'},
+  {id: 'h19', f: 'harbor', name: 'HRB_0419.MOV', kind: 'video', size: 2.4 * GB, dur: 80, spec: {d: 'interview', seed: 'h', bg: ['#6a4b3a', '#d6a77a'], skin: '#e0b48f', shirt: '#7a2e2e', hair: '#5b3a1e', lower: ['Ken Ito', 'Ferry captain']}, date: 'Nov 4, 2026'},
+  {id: 'hst', f: 'harbor', name: 'Still_01.JPG', kind: 'photo', size: 24, spec: H({seed: 'i', gulls: true, hill: 4}), date: 'Nov 4, 2026', local0: true},
+  {id: 'hsl', f: 'harbor', name: 'Shot list.pdf', kind: 'doc', size: 1.8, spec: {d: 'doc', seed: 'j', title: 'Shot list · Harbor', sub: 'Day 2 · Nov 4', table: true}, date: 'Nov 2, 2026', local0: true, text: 'shot list ferry crossing left to right harbor master interview'},
+  // Rosa
+  ...[['portrait', 'Mama, 1969', 1969], ['wedding', 'June 1974', 1974], ['garden', 'Garden, 1977', 1977], ['car', 'Trip to Sedona, 1979', 1979], ['beach', 'San Diego, 1981', 1981], ['house', 'New house, 1985', 1985], ['birthday', "Lucy's 6th, 1988", 1988], ['group', 'Reunion, 1990', 1990], ['grad', "Tom's graduation, 1992", 1992]]
+    .map(([k, cap], i) => ({id: 's' + i, f: 'scans', name: 'Scan_' + String(i * 7 + 3).padStart(3, '0') + '.jpg', kind: 'photo', size: 18 + (i * 7) % 22, spec: {d: 'scan', k, cap, seed: 's' + k}, date: 'Oct ' + (10 + i) + ', 2026', text: cap.toLowerCase(), scan: true})),
+  // Rafi
+  {id: 'p1', f: 'phone', name: 'VID_20261102_0814.mp4', kind: 'video', size: 412, dur: 34, spec: {d: 'street', seed: 'p1'}, date: 'Nov 2, 2026'},
+  {id: 'p2', f: 'phone', name: 'VID_20261103_1730.mp4', kind: 'video', size: 268, dur: 22, spec: {d: 'chain', seed: 'p2', frame: '#2a6fbd'}, date: 'Nov 3, 2026'},
+  {id: 'p3', f: 'phone', name: 'VID_20261103_1902.mp4', kind: 'video', size: 590, dur: 49, spec: {d: 'market', seed: 'p3'}, date: 'Nov 3, 2026'},
+  {id: 'p4', f: 'phone', name: 'VID_20261105_0740.mp4', kind: 'video', size: 330, dur: 27, spec: {d: 'chain', seed: 'p4', broken: true, frame: '#2a6fbd'}, date: 'Nov 5, 2026'},
+  {id: 'p5', f: 'phone', name: 'VID_20261105_1215.mp4', kind: 'video', size: 455, dur: 38, spec: {d: 'street', seed: 'p5', rain: true}, date: 'Nov 5, 2026'},
+  {id: 'p6', f: 'phone', name: 'VID_20261106_2010.mp4', kind: 'video', size: 205, dur: 17, spec: {d: 'tea', seed: 'p6'}, date: 'Nov 6, 2026'},
+  {id: 'p7', f: 'phone', name: 'VID_20261107_1840.mp4', kind: 'video', size: 620, dur: 52, spec: {d: 'interview', seed: 'p7', bg: ['#3f6b4e', '#a7c98f'], skin: '#8d5a3c', shirt: '#e2b23a', hair: '#141414'}, date: 'Nov 7, 2026'},
+  {id: 'p8', f: 'phone', name: 'IMG_20261105_0802.jpg', kind: 'photo', size: 3.4, spec: {d: 'receipt'}, date: 'Nov 5, 2026', local0: true, text: 'rahman cycle receipt chain labour brake pad total 590'},
+  // Ken
+  {id: 'k4', f: 'kyoto', name: 'KL_Drawings_Rev4.pdf', kind: 'pdf', size: 84, pages: sheetSpecs('REV 4'), spec: null, date: 'Nov 6, 2026', text: 'kyoto city library rev 4 a-000 a-101 site plan a-102 a-103 a-201 elevations a-301 section a-a a-302 section b-b a-501'},
+  {id: 'k3', f: 'kyoto', name: 'KL_Drawings_Rev3.pdf', kind: 'pdf', size: 79, pages: sheetSpecs('REV 3', true), spec: null, date: 'Sep 18, 2026', text: 'kyoto city library rev 3 superseded a-301 section a-a'},
+  {id: 'ks', f: 'kyoto', name: 'KL_Structural_S-Set.pdf', kind: 'pdf', size: 46, pages: [['struct', 'S-101', 'Foundation plan'], ['struct', 'S-201', 'Level 2 framing'], ['struct', 'S-202', 'Roof framing']].map(([k, s, t]) => ({d: 'sheet', k, sheet: s, title: t, rev: 'REV 2'})), spec: null, date: 'Oct 2, 2026', text: 'structural foundation framing s-101'},
+  {id: 'kp', f: 'kyoto', name: 'Site_visit_0921.jpg', kind: 'photo', size: 6.2, spec: {d: 'city', seed: 'kp'}, date: 'Sep 21, 2026'},
+  {id: 'km', f: 'kyoto', name: 'Minutes_Oct-14.pdf', kind: 'doc', size: 1.1, spec: {d: 'doc', seed: 'km', title: 'Design meeting minutes', sub: 'Oct 14, 2026 · Kyoto City Library'}, date: 'Oct 14, 2026', local0: true, text: 'minutes design meeting section a-a stair revision'},
+  // Maya
+  {id: 'b1', f: 'bio', name: 'IMG_2231.PNG', kind: 'image', size: 2.4, spec: {d: 'slide', lec: 'Lecture 5', title: 'The cell membrane', bul: ['Phospholipid bilayer', 'Selective permeability', 'Transport proteins'], d2: 'cell'}, date: 'Sep 22, 2026', local0: true},
+  {id: 'b2', f: 'bio', name: 'IMG_2232.PNG', kind: 'image', size: 2.1, spec: {d: 'slide', lec: 'Lecture 6', title: 'Ribosomes and protein synthesis', bul: ['mRNA is read in codons', 'tRNA brings amino acids', 'Rough ER vs free ribosomes'], d2: 'ribo'}, date: 'Sep 29, 2026', local0: true},
+  {id: 'b3', f: 'bio', name: 'IMG_2240.PNG', kind: 'image', size: 2.6, spec: {d: 'slide', lec: 'Lecture 7', title: 'Mitochondria and ATP', bul: ['Inner membrane folds: cristae', 'Electron transport chain', 'About 30 to 32 ATP per glucose'], d2: 'mito'}, date: 'Oct 6, 2026'},
+  {id: 'b4', f: 'bio', name: 'IMG_2241.PNG', kind: 'image', size: 2.3, spec: {d: 'slide', dark: true, lec: 'Lecture 8', title: 'Photosynthesis', bul: ['Light reactions in thylakoids', 'Calvin cycle fixes CO2', 'Chlorophyll absorbs red and blue'], d2: 'leaf'}, date: 'Oct 13, 2026'},
+  {id: 'b5', f: 'bio', name: 'IMG_2250.PNG', kind: 'image', size: 2.2, spec: {d: 'slide', dark: true, lec: 'Lecture 9', title: 'Cell cycle and mitosis', bul: ['Interphase: G1, S, G2', 'Mitosis: PMAT', 'Checkpoints stop errors'], d2: 'cycle'}, date: 'Oct 20, 2026'},
+  {id: 'b6', f: 'bio', name: 'IMG_2255.PNG', kind: 'image', size: 2.0, spec: {d: 'slide', lec: 'Lecture 10', title: 'Enzyme kinetics', bul: ['Vmax and Km', 'Competitive inhibition', 'Temperature and pH'], d2: 'curve'}, date: 'Oct 27, 2026'},
+  {id: 'b7', f: 'bio', name: 'Scan Oct 3.pdf', kind: 'doc', size: 4.8, spec: {d: 'doc', hand: true, seed: 'b7', title: 'Krebs cycle notes', lines: ['happens in the matrix', 'acetyl-CoA + oxaloacetate -> citrate', '2 turns per glucose', '-> 6 NADH, 2 FADH2, 2 ATP', 'feeds the ETC (Lecture 7!)']}, date: 'Oct 3, 2026'},
+  {id: 'b8', f: 'bio', name: 'Lab report 2.pdf', kind: 'doc', size: 1.4, spec: {d: 'doc', seed: 'b8', title: 'Lab 2: Enzyme activity', sub: 'Maya R. · Bio 201 section 4', chart: true}, date: 'Oct 30, 2026'}
+];
+const FBY = Object.fromEntries(FILES.map(f => [f.id, f]));
+FILES.forEach(f => {
+  if (f.kind === 'image' && f.spec.d === 'slide') f.text = (f.spec.title + ' ' + f.spec.bul.join(' ')).toLowerCase();
+  if (f.kind === 'doc' && f.spec.hand) f.text = (f.spec.title + ' ' + f.spec.lines.join(' ')).toLowerCase();
+});
+const KIND = {video: ['Video', '#7c4dd8', 'MOV'], photo: ['Photo', '#e07a2e', 'JPG'], image: ['Image', '#2d9f6e', 'PNG'], pdf: ['PDF', '#d8443a', 'PDF'], doc: ['Document', '#4a7bd6', 'PDF']};
+const ext = f => f.name.split('.').pop().toUpperCase();
+
+const SCEN = [
+  {id: 'daniel', who: 'Daniel', age: '34 · video editor · London', col: '#7c4dd8', dev: 'mac', net: 'wifi', folder: 'harbor', title: 'Find the right take',
+    goal: 'Find the daylight take where the ferry crosses left to right.', target: 'h17', wrong: {h18: 'Right direction, but this take is at night.', h12: 'This ferry goes right to left, at dusk.'}, def: 'No ferry crosses in this take.',
+    hint: 'Hover a video tile to scrub through it. Click to open Quick Look.'},
+  {id: 'rosa', who: 'Rosa', age: '71 · retiree · Phoenix', col: '#e07a2e', dev: 'ipad', net: 'wifi', folder: 'scans', title: 'Are my photos still there?',
+    goal: "Find Grandpa and Grandma's 1974 wedding photo.", target: 's1', def: 'Not this one. Look for 1974.', hint: 'Tap a scan to open it.'},
+  {id: 'rafi', who: 'Rafi', age: '24 · delivery rider · Dhaka', col: '#13977f', dev: 'iphone', net: 'cell', folder: 'phone', title: 'On prepaid data',
+    goal: 'Find the video of the broken chain to send to the repair shop.', target: 'p4', wrong: {p2: 'Same bike, but the chain is fine in this one.'}, def: 'No broken chain in this video.',
+    hint: 'You are on cellular with 3.1 GB left this month. Tap a video to check it.'},
+  {id: 'ken', who: 'Ken', age: '52 · architect · Osaka', col: '#29406a', dev: 'ipad', net: 'wifi', folder: 'kyoto', title: 'Find one sheet in a set',
+    goal: 'Find sheet A-301, Section A-A, in the latest set (Rev 4).', target: 'k4', page: 5, wrong: {k3: 'Right sheet, but Rev 3 is superseded.'}, def: 'This is not the drawing set.',
+    hint: 'Open a PDF, then flip pages with the strip or the arrow keys.'},
+  {id: 'maya', who: 'Maya', age: '19 · student · Austin', col: '#cf3f6b', dev: 'iphone', net: 'wifi', folder: 'bio', title: 'Search inside screenshots',
+    goal: 'Find the lecture slide about mitochondria.', target: 'b3', wrong: {b5: 'Close: this one is mitosis, not mitochondria.', b7: 'These notes mention Lecture 7, but they are not the slide.'}, def: 'Not the mitochondria slide.',
+    hint: 'Try searching for "mito".'}
+];
+const SBY = Object.fromEntries(SCEN.map(s => [s.id, s]));
+
+/* ================= state ================= */
+let S, V;
+const results = {}; // scenario -> {before, after}
+function fresh(scId) {
+  const sc = SBY[scId || 'daniel'];
+  return {scen: sc.id, mode: 'after', device: sc.dev, net: sc.net, folder: sc.dev === 'iphone' ? sc.folder : sc.folder, view: 'grid', query: '',
+    local: new Set(FILES.filter(f => f.local0).map(f => f.id)), sel: null, ql: null, qlPage: 0, sheet: null, settings: false, toast: null,
+    cellVideo: false, askCell: true, streamOK: new Set(), queued: new Set(),
+    m: {wifi: 0, cell: 0, store: 0, originals: 0, checked: new Set(), wait: 0, previewMB: 0}, t0: Date.now(), done: null, log: [], dl: null};
+}
+V = {playing: false, pt: 0, raf: 0, lastTs: 0};
+
+/* ================= assets ================= */
+const TH = {}, FR = {}, PG = {}, BIG = {};
+const NFR = 12;
+function thumbSize(f) { if (f.kind === 'video') return [320, 180]; if (f.spec && f.spec.d === 'scan') return [300, 252]; if (f.spec && f.spec.d === 'slide') return [320, 180]; if (f.kind === 'doc') return [186, 240]; if (f.kind === 'pdf') return [340, 240]; return [320, 240]; }
+function build() {
+  FILES.forEach(f => {
+    const [w, h] = thumbSize(f);
+    if (f.kind === 'pdf') { PG[f.id] = f.pages.map(p => render(p, w, h, 0, .9)); TH[f.id] = PG[f.id][0]; return; }
+    if (f.kind === 'video') { FR[f.id] = Array.from({length: NFR}, (_, i) => render(f.spec, w, h, (i + .5) / NFR)); TH[f.id] = FR[f.id][Math.floor(NFR * .45)]; return; }
+    TH[f.id] = render(f.spec, w, h, .5, .9);
+  });
+}
+function big(f, page) {
+  const key = f.id + ':' + (page || 0); if (BIG[key]) return BIG[key];
+  let url;
+  if (f.kind === 'pdf') url = render(f.pages[page], 1200, 848, 0, .9);
+  else if (f.kind === 'doc') url = render(f.spec, 600, 776, 0, .9);
+  else if (f.spec.d === 'slide') url = render(f.spec, 1120, 630, 0, .9);
+  else if (f.spec.d === 'scan') url = render(f.spec, 900, 756, 0, .9);
+  else url = render(f.spec, 1080, 810, .5, .9);
+  return BIG[key] = url;
+}
+
+/* ================= icons ================= */
+const I = {
+  cloud: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15h8.2a3.3 3.3 0 0 0 .5-6.55A4.8 4.8 0 0 0 5.6 7.6 3.7 3.7 0 0 0 6 15Z"/><path d="M10 8.6v4.2M8.2 11l1.8 1.8 1.8-1.8"/></svg>',
+  cloudPlain: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M6 15h8.2a3.3 3.3 0 0 0 .5-6.55A4.8 4.8 0 0 0 5.6 7.6 3.7 3.7 0 0 0 6 15Z"/></svg>',
+  folder: '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M2.5 5.5A1.5 1.5 0 0 1 4 4h3.6l1.6 1.6H16a1.5 1.5 0 0 1 1.5 1.5v7.4A1.5 1.5 0 0 1 16 16H4a1.5 1.5 0 0 1-1.5-1.5Z" opacity=".9"/></svg>',
+  clock: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2" stroke-linecap="round"/></svg>',
+  share: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.8 6.2 10 3l3.2 3.2"/><path d="M6 9H5a1.5 1.5 0 0 0-1.5 1.5v5A1.5 1.5 0 0 0 5 17h10a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 15 9h-1"/></svg>',
+  grid: '<svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="3" width="6" height="6" rx="1.3"/><rect x="11" y="3" width="6" height="6" rx="1.3"/><rect x="3" y="11" width="6" height="6" rx="1.3"/><rect x="11" y="11" width="6" height="6" rx="1.3"/></svg>',
+  list: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 5h10M7 10h10M7 15h10M3.5 5h.01M3.5 10h.01M3.5 15h.01"/></svg>',
+  search: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="9" r="5.5"/><path d="m13.2 13.2 3.3 3.3"/></svg>',
+  gear: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" stroke-linecap="round"/></svg>',
+  back: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.5 4-6 6 6 6"/></svg>',
+  play: '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M6 4.2v11.6a.8.8 0 0 0 1.2.7l9.3-5.8a.8.8 0 0 0 0-1.4L7.2 3.5A.8.8 0 0 0 6 4.2Z"/></svg>',
+  pause: '<svg viewBox="0 0 20 20" fill="currentColor"><rect x="5" y="4" width="3.4" height="12" rx="1"/><rect x="11.6" y="4" width="3.4" height="12" rx="1"/></svg>',
+  lock: '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M6 8V6.5a4 4 0 1 1 8 0V8h.5A1.5 1.5 0 0 1 16 9.5v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 15.5v-6A1.5 1.5 0 0 1 5.5 8Zm2 0h4V6.5a2 2 0 1 0-4 0Z"/></svg>',
+  stream: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 10h2l2-5 3 10 2-6 1.5 3H17"/></svg>',
+  warn: '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M8.7 3.3a1.5 1.5 0 0 1 2.6 0l6.2 11A1.5 1.5 0 0 1 16.2 16.5H3.8a1.5 1.5 0 0 1-1.3-2.2Zm.55 4.2v4h1.5v-4Zm0 5.2v1.5h1.5v-1.5Z"/></svg>',
+  wifi: '<svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0Zm-4-4.1L2.6 6a7.6 7.6 0 0 1 10.8 0L12 7.4a5.6 5.6 0 0 0-8 0Z"/><path d="M1 3.4A10.2 10.2 0 0 1 15 3.4L13.6 4.8a8.2 8.2 0 0 0-11.2 0Z"/></svg>',
+  cell: '<svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>',
+  batt: '<svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="16" height="8" rx="1.8" fill="currentColor"/><rect x="23.5" y="4" width="1.8" height="4" rx=".9" fill="currentColor" opacity=".45"/></svg>',
+  chevL: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.5 4-6 6 6 6"/></svg>',
+  chevR: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4 6 6-6 6"/></svg>',
+  tabRecents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round"/></svg>',
+  tabShared: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h4l1.8 1.8h7.2a1.5 1.5 0 0 1 1.5 1.5v8.2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z" opacity=".85"/></svg>',
+  tabBrowse: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2h8A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5Z"/></svg>',
+  docGlyph: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 8h10M7 12h10M7 16h6"/></svg>',
+  vidGlyph: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 6.5v11l9-5.5Z"/></svg>',
+  imgGlyph: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m4 16 5-5 4 4 2-2 5 5"/><circle cx="15.5" cy="9.5" r="1.5"/></svg>'
+};
+const glyph = f => f.kind === 'video' ? I.vidGlyph : (f.kind === 'pdf' || f.kind === 'doc') ? I.docGlyph : I.imgGlyph;
+const gicon = f => `<div class="gi">${glyph(f)}<b style="background:${KIND[f.kind][1]}">${ext(f)}</b></div>`;
+
+/* ================= helpers ================= */
+const isLocal = id => S.local.has(id);
+const canSee = f => S.mode === 'after' || isLocal(f.id);
+const sc = () => SBY[S.scen];
+const elapsed = () => ((S.done ? S.done.at : Date.now()) - S.t0) / 1000 + S.m.wait;
+function log(text) { S.log.unshift({t: clock(), text}); if (S.log.length > 40) S.log.pop(); }
+function toast(text, kind) { S.toast = {text, kind, id: Math.random()}; const id = S.toast.id; setTimeout(() => { if (S.toast && S.toast.id === id) { S.toast = null; paint(); } }, 2800); }
+function speed() { return S.net === 'wifi' ? 25 : 5; } // MB per second, real world
+function sizeLine(f) { return f.kind === 'video' ? fmtMB(f.size) + ' · ' + fmtT(f.dur) : f.kind === 'pdf' ? fmtMB(f.size) + ' · ' + f.pages.length + ' pages' : fmtMB(f.size); }
+function filesInView() {
+  const q = S.query.trim().toLowerCase();
+  if (!q) return FILES.filter(f => f.f === S.folder);
+  return FILES.filter(f => f.name.toLowerCase().includes(q) || (f.text && canSee(f) && f.text.includes(q)));
+}
+function snippet(f, q) {
+  if (!q || !f.text || f.name.toLowerCase().includes(q)) return '';
+  const i = f.text.indexOf(q); if (i < 0) return '';
+  const a = Math.max(0, f.text.lastIndexOf(' ', Math.max(0, i - 14)) + 1); let b = f.text.indexOf(' ', i + q.length + 12); if (b < 0) b = f.text.length;
+  const s = f.text.slice(a, b);
+  const j = s.indexOf(q);
+  return `<div class="snip">${a > 0 ? '…' : ''}${esc(s.slice(0, j))}<mark>${esc(s.slice(j, j + q.length))}</mark>${esc(s.slice(j + q.length))}${b < f.text.length ? '…' : ''}</div>`;
+}
+
+/* ================= device rendering ================= */
+function tile(f, pointer) {
+  const see = canSee(f), cloud = !isLocal(f.id);
+  const scrub = pointer && see && (f.kind === 'video' || f.kind === 'pdf');
+  const q = S.query.trim().toLowerCase();
+  return `<button class="tile" data-act="open" data-id="${f.id}" ${scrub ? 'data-scrub="1"' : ''} aria-selected="${S.sel === f.id}" aria-label="${esc(f.name)}${cloud ? ', in iCloud' : ''}">
+    <div class="th">${see ? `<img src="${TH[f.id]}" alt="" draggable="false">` : gicon(f)}
+      ${cloud ? `<span class="cloudb" title="In iCloud, not on this device">${I.cloud}</span>` : ''}
+      ${f.kind === 'video' && see ? `<span class="dur">${fmtT(f.dur)}</span><span class="scrubline"><i></i></span>` : ''}
+      ${f.kind === 'pdf' && see ? `<span class="pg">${f.pages.length} pp</span><span class="scrubline"><i></i></span>` : ''}
+    </div>
+    <div class="nm">${esc(f.name)}</div><div class="mt">${sizeLine(f)}</div>${snippet(f, q)}</button>`;
+}
+function listView(files) {
+  return `<div class="lhead"><span></span><span>Name</span><span>Date</span><span>Size</span><span></span></div><div class="list">` + files.map(f => {
+    const see = canSee(f), cloud = !isLocal(f.id);
+    return `<button class="lrow" data-act="open" data-id="${f.id}" aria-selected="${S.sel === f.id}"><span class="lt">${see ? `<img src="${TH[f.id]}" alt="">` : gicon(f)}</span><span>${esc(f.name)}</span><span class="c">${f.date.replace(', 2026', '')}</span><span class="c">${fmtMB(f.size)}</span><span>${cloud ? I.cloud : ''}</span></button>`;
+  }).join('') + '</div>';
+}
+function searchNote(files) {
+  const q = S.query.trim(); if (!q) return '';
+  if (S.mode === 'before') { const hidden = FILES.filter(f => f.text && !isLocal(f.id)).length;
+    return `<div class="note-row">${I.warn}<span>${files.length} result${files.length === 1 ? '' : 's'} by name. ${hidden} files aren't downloaded, so their contents can't be searched.</span></div>`; }
+  return `<div class="note-row" style="color:var(--winmuted)"><span style="color:var(--ok);display:flex">${I.search}</span><span>${files.length} result${files.length === 1 ? '' : 's'} across iCloud Drive, including text inside scans, slides and PDFs.</span></div>`;
+}
+function bodyHTML(pointer) {
+  const files = filesInView();
+  const empty = !files.length ? `<p style="color:var(--winmuted);text-align:center;margin-top:40px">No files match “${esc(S.query)}”.</p>` : '';
+  return searchNote(files) + (S.view === 'list' && S.device !== 'iphone' ? listView(files) : `<div class="grid">${files.map(f => tile(f, pointer)).join('')}</div>`) + empty;
+}
+function searchBox(ph) { return `<label class="search">${I.search}<input id="q-${S.device}" type="text" placeholder="${ph}" value="${esc(S.query)}" data-act="query" autocomplete="off" aria-label="Search">${S.query ? '<button class="x" data-act="clearq" aria-label="Clear search">✕</button>' : ''}</label>`; }
+function folderTitle() { return S.query.trim() ? 'Search results' : (FOLDERS.find(x => x.id === S.folder) || {}).name || 'iCloud Drive'; }
+function counts() { const files = FILES.filter(f => f.f === S.folder); const c = files.filter(f => !isLocal(f.id)).length; return files.length + ' items · ' + c + ' in iCloud only'; }
+function sideHTML(mac) {
+  return (mac ? '<div class="lights"><i></i><i></i><i></i></div>' : '<h2 style="font-family:var(--body);font-size:22px;padding:10px 8px 4px">Browse</h2>') +
+    `<h4>${mac ? 'Favorites' : 'Locations'}</h4><button tabindex="-1">${I.clock}Recents</button>` +
+    `<h4>iCloud</h4>` + FOLDERS.map(fo => `<button data-act="folder" data-f="${fo.id}" aria-current="${!S.query && S.folder === fo.id}">${I.folder}${esc(fo.short)}</button>`).join('');
+}
+function macHTML(st) {
+  return `<div class="dev mac" data-dev="mac"><nav class="side">${sideHTML(true)}</nav><div class="main">
+    <div class="tbar"><h3>${esc(folderTitle())}</h3>
+      <button class="tbtn" data-act="view" data-v="grid" aria-pressed="${S.view === 'grid'}" aria-label="Icon view">${I.grid}</button>
+      <button class="tbtn" data-act="view" data-v="list" aria-pressed="${S.view === 'list'}" aria-label="List view">${I.list}</button>
+      <button class="tbtn" data-act="settings" aria-label="iCloud Drive preview settings">${I.gear}</button>${searchBox('Search')}</div>
+    <div class="body" id="dbody">${bodyHTML(true)}</div>
+    <div class="sbar2"><span>${counts()}</span><span>${S.mode === 'after' ? 'Live Previews on · encrypted' : 'Optimize Mac Storage on'}</span></div>
+    ${overlays(st)}</div></div>`;
+}
+function statusBar(big) { return `<div class="sbar"><span>9:41</span><span class="ic">${S.net === 'cell' ? I.cell + (big ? '<span style="font-size:11px">5G</span>' : '') : I.wifi}${I.batt}</span></div>`; }
+function ipadHTML(st) {
+  return `<div class="dev ipad ios" data-dev="ipad"><div class="scr"><nav class="side"><div class="sbar" style="padding:0 10px"><span>9:41 Tue Nov 10</span></div>${sideHTML(false)}</nav>
+    <div class="main" style="flex:1">${statusBar()}
+      <div class="tbar"><h3 style="font-size:20px">${esc(folderTitle())}</h3>
+        <button class="tbtn" data-act="view" data-v="grid" aria-pressed="${S.view === 'grid'}" aria-label="Icon view">${I.grid}</button>
+        <button class="tbtn" data-act="view" data-v="list" aria-pressed="${S.view === 'list'}" aria-label="List view">${I.list}</button>
+        <button class="tbtn" data-act="settings" aria-label="Preview settings">${I.gear}</button>${searchBox('Search')}</div>
+      <div class="body" id="dbody">${bodyHTML(true)}</div>
+    </div>${overlays(st)}</div></div>`;
+}
+function iphoneHTML(st) {
+  let inner;
+  if (!S.folder && !S.query.trim()) {
+    inner = `<div class="ios-nav"><div class="row"><span></span><button class="tbtn" data-act="settings" aria-label="Preview settings">${I.gear}</button></div><h2>iCloud Drive</h2>${searchBox('Search')}</div>
+      <div class="body" id="dbody" style="padding-top:0">${FOLDERS.map(fo => { const n = FILES.filter(f => f.f === fo.id).length; return `<button class="fl" data-act="folder" data-f="${fo.id}">${I.folder}<span><b>${esc(fo.short)}</b><small>${n} items</small></span></button>`; }).join('')}</div>`;
+  } else {
+    inner = `<div class="ios-nav"><div class="row"><button class="back" data-act="up">${I.back}iCloud Drive</button><button class="tbtn" data-act="settings" aria-label="Preview settings">${I.gear}</button></div><h2>${esc(S.query.trim() ? 'Search' : (FOLDERS.find(x => x.id === S.folder) || {}).short)}</h2>${searchBox('Search')}</div>
+      <div class="body" id="dbody" style="padding-top:4px">${bodyHTML(false)}</div>`;
+  }
+  return `<div class="dev iphone ios" data-dev="iphone"><div class="scr"><div class="island"></div>${statusBar(true)}${inner}
+    <div class="ios-tabs"><span>${I.tabRecents}Recents</span><span>${I.tabShared}Shared</span><span class="on">${I.tabBrowse}Browse</span></div>${overlays(st)}</div></div>`;
+}
+function overlays(st) { return (S.ql ? qlHTML(st) : '') + (S.settings ? settingsHTML() : '') + (S.sheet ? sheetHTML() : '') + (S.toast ? `<div class="toast ${S.toast.kind || ''}" role="status">${esc(S.toast.text)}</div>` : ''); }
+
+/* ---------- Quick Look ---------- */
+function qlHTML(st) {
+  const f = FBY[S.ql], local = isLocal(f.id), mode = S.mode, ios = S.device !== 'mac';
+  let body = '', paper = false, strip = '', badge = '';
+  const dlActive = S.dl && S.dl.id === f.id;
+  if (!local && (mode === 'before' || dlActive)) {
+    const got = dlActive ? S.dl.got : 0;
+    body = `<div class="dl">${gicon(f)}<b>${dlActive && S.dl.user ? 'Downloading original' : 'Downloading to open'} ${esc(f.name)}</b>
+      <div class="meter"><i id="dlbar" style="width:${(got / f.size * 100).toFixed(1)}%"></i></div>
+      <small id="dltxt">${fmtMB(got)} of ${fmtMB(f.size)} · about ${fmtT((f.size - got) / speed())} left on ${S.net === 'wifi' ? 'Wi-Fi' : 'cellular'}</small>
+      ${mode === 'before' ? '<small>Today, iCloud has to download the whole file before it can show you anything.</small>' : ''}</div>`;
+  } else if (f.kind === 'video') {
+    const blocked = !local && S.net === 'cell' && !S.cellVideo && !S.streamOK.has(f.id);
+    if (blocked) {
+      const cost = Math.max(1, Math.round(f.dur / 60 * 6 * 10) / 10);
+      body = `<div class="poster"><img src="${FR[f.id][V.frameIdx ?? Math.floor(.45 * NFR)] || TH[f.id]}" alt="Preview frame of ${esc(f.name)}"><div class="over"><b>Frames below are already on your phone.</b><small>Streaming the preview video uses about ${cost} MB of cellular data.</small><button class="btn pri" data-act="stream">Stream preview · ${cost} MB</button></div></div>`;
+      badge = `<span class="badge">${I.lock}Preview frames · on device</span>`;
+    } else {
+      const cur = V.pt * f.dur;
+      body = (st ? `<img src="${render(f.spec, 960, 540, V.pt || .5, .88)}" alt="">` : `<canvas id="player" width="960" height="540" aria-label="Video preview of ${esc(f.name)}"></canvas>`) +
+        `<span class="badge">${local ? 'Original · 4K' : I.stream + 'Preview · 720p · streaming'}</span>${!local ? `<span class="badge r">${I.lock}Nothing saved</span>` : ''}
+        <div class="ctrls"><button data-act="play" aria-label="${V.playing ? 'Pause' : 'Play'}">${V.playing ? I.pause : I.play}</button>
+        <div class="prog" id="prog" data-act="seek"><i id="progi" style="width:${(V.pt * 100).toFixed(2)}%"></i><div class="tip" id="tip"><img id="tipimg" alt=""><span id="tipt">0:00</span></div></div>
+        <time id="ptime">${fmtT(cur)} / ${fmtT(f.dur)}</time></div>`;
+    }
+    strip = `<div class="strip" aria-label="Scrub frames">` + FR[f.id].map((u, i) => `<button data-act="frame" data-i="${i}" aria-label="Jump to ${fmtT((i + .5) / NFR * f.dur)}" aria-current="${Math.floor(V.pt * NFR) === i}"><img src="${u}" alt=""></button>`).join('') + '</div>';
+  } else if (f.kind === 'pdf') {
+    paper = true; const p = S.qlPage;
+    body = `<img src="${big(f, p)}" alt="${esc(f.pages[p].sheet + ' ' + f.pages[p].title)}"><span class="badge">${local ? 'Original PDF' : 'Preview · page ' + (p + 1) + ' of ' + f.pages.length}</span>
+      <span class="badge r" style="gap:2px;padding:2px"><button class="tbtn" style="color:#fff;width:24px;height:22px" data-act="page" data-d="-1" aria-label="Previous page" ${p === 0 ? 'disabled' : ''}>${I.chevL}</button><button class="tbtn" style="color:#fff;width:24px;height:22px" data-act="page" data-d="1" aria-label="Next page" ${p === f.pages.length - 1 ? 'disabled' : ''}>${I.chevR}</button></span>`;
+    strip = `<div class="strip" aria-label="Pages">` + PG[f.id].map((u, i) => `<button data-act="pg" data-i="${i}" aria-current="${i === p}" aria-label="Page ${i + 1}, ${esc(f.pages[i].sheet)}"><img src="${u}" alt=""><span class="pn">${f.pages[i].sheet}</span></button>`).join('') + '</div>';
+  } else {
+    paper = f.kind === 'doc';
+    body = `<img src="${big(f)}" alt="${esc(f.name)}"><span class="badge">${local ? 'Original' : 'Preview · ' + (f.kind === 'doc' ? 'first page' : '2048 px')}</span>`;
+  }
+  const task = !S.done && FILES.find(x => x.id === S.ql).f === sc().folder;
+  const pageNote = f.kind === 'pdf' ? ` · ${f.pages[S.qlPage].sheet} ${f.pages[S.qlPage].title}` : '';
+  const foot = `<div class="qlf"><div class="info"><b>${esc(f.name)}</b><span>${sizeLine(f)}${pageNote}</span>
+      ${!local && mode === 'after' ? `<span class="lock">${I.lock}Preview is end-to-end encrypted</span>` : local ? '<span>On this device</span>' : ''}</div>
+      ${!local && mode === 'after' && !dlActive ? `<button class="btn" data-act="download">${S.queued.has(f.id) ? 'Queued for Wi-Fi' : 'Download original · ' + fmtMB(f.size)}</button>` : ''}
+      ${task ? `<button class="btn ok" data-act="pick" ${(!local && mode === 'before') || dlActive ? 'disabled' : ''}>This is the one</button>` : `<button class="btn" data-act="share">${I.share.replace('<svg', '<svg width="14" height="14" style="vertical-align:-2px;margin-right:4px"')}Share</button>`}</div>`;
+  const head = `<div class="qlh">${ios ? '<button class="done" data-act="close">Done</button>' : `<button class="tbtn" data-act="close" aria-label="Close Quick Look">✕</button>`}<b>${esc(f.name)}</b>${ios ? `<button class="tbtn" data-act="share" aria-label="Share">${I.share}</button>` : '<span style="width:30px"></span>'}</div>`;
+  return `<div class="ql" role="dialog" aria-label="Quick Look: ${esc(f.name)}"><div class="qlp">${head}<div class="qlb ${paper ? 'paper' : ''}">${body}</div>${strip}${foot}</div></div>`;
+}
+
+/* ---------- settings ---------- */
+function settingsHTML() {
+  const total = 200 * GB, used = 142 * GB, prev = 418;
+  const stor = S.mode === 'after';
+  return `<div class="set" role="dialog" aria-label="iCloud Drive previews settings"><div class="setp">
+    <div class="seth"><b>iCloud Drive · Previews</b><button class="done btn" data-act="closeset">Done</button></div>
+    <div class="setb">
+      ${stor ? '' : `<div class="note-row" style="margin:0">${I.warn}<span>Live Previews is part of the concept. Switch to Live Previews to try these settings.</span></div>`}
+      <div class="grp"><div class="it"><div>iCloud storage<small>${fmtMB(used)} of ${fmtMB(total)} used. Previews: ${fmtMB(prev)}, not counted against your plan.</small>
+        <div class="stor"><i style="width:${used / total * 100 * .55}%;background:#1d6ef2"></i><i style="width:${used / total * 100 * .3}%;background:#e07a2e"></i><i style="width:${used / total * 100 * .15}%;background:#7c4dd8"></i><i style="width:1.2%;background:#13977f"></i></div></div></div></div>
+      <div class="ghd">Previews</div>
+      <div class="grp">
+        <div class="it"><div>Show previews for files in iCloud<small>Thumbnails, first pages and video frames sync with your files.</small></div><span class="ok">${I.lock}On</span></div>
+        <div class="it"><div>Stream video previews on cellular<small>About 6 MB per minute of video. Frames always work.</small></div><button class="sw" role="switch" aria-checked="${S.cellVideo}" data-act="tog" data-k="cellVideo" ${stor ? '' : 'disabled'} aria-label="Stream video previews on cellular"></button></div>
+        <div class="it"><div>Ask before downloading on cellular<small>Shows the size and your data left first.</small></div><button class="sw" role="switch" aria-checked="${S.askCell}" data-act="tog" data-k="askCell" ${stor ? '' : 'disabled'} aria-label="Ask before downloading on cellular"></button></div>
+      </div>
+      <div class="ghd">Status</div>
+      <div class="grp">
+        <div class="it"><div>Preview coverage<small>12,408 of 12,431 files. 23 are in formats without a previewer.</small></div><span class="v">99.8%</span></div>
+        <div class="it"><div>Advanced Data Protection<small>Previews are made on the device that saved each file and encrypted with its keys.</small></div><span class="ok">${I.lock}On</span></div>
+        <div class="it"><div>Older files<small>Previews for files saved before this update were made overnight on your Mac.</small></div><span class="v">Done</span></div>
+      </div>
+      <p class="gcap">Previews are about 0.3% of your iCloud storage.</p>
+    </div></div></div>`;
+}
+function sheetHTML() {
+  const f = FBY[S.sheet.id]; const left = 3100 - S.m.cell; const after = left - f.size;
+  return `<div class="sheet" role="dialog" aria-label="Download on cellular"><div class="card">
+    <h4>Download ${esc(f.name)} on cellular?</h4><p>The preview already shows you what's in it. The original is ${fmtMB(f.size)}.</p>
+    <div class="cost"><span>This download</span><b>${fmtMB(f.size)}</b><span>Data left this month</span><b>${fmtMB(Math.max(0, left))}</b><span>Left after</span><b style="color:${after < 1000 ? 'var(--bad)' : 'inherit'}">${fmtMB(Math.max(0, after))}</b>
+      <div class="meterbar"><i style="width:${Math.max(0, after) / 3100 * 100}%;background:var(--ok)"></i><i style="width:${Math.min(left, f.size) / 3100 * 100}%;background:var(--warn)"></i></div></div>
+    <div class="acts"><button class="btn pri" data-act="queue">Download on Wi-Fi later</button><button class="btn" data-act="dlnow">Download now · ${fmtMB(f.size)}</button><button class="btn" data-act="closesheet" style="background:none;border:0;color:var(--accent)">Cancel</button></div></div></div>`;
+}
+function deviceHTML(st) { return S.device === 'mac' ? macHTML(st) : S.device === 'ipad' ? ipadHTML(st) : iphoneHTML(st); }
+const DIMS = {mac: [900, 590], ipad: [880, 640], iphone: [380, 800]};
+
+/* ================= rails ================= */
+function paintRails() {
+  document.getElementById('scens').innerHTML = SCEN.map(s => `<button class="scen" data-scen="${s.id}" aria-pressed="${S.scen === s.id}"><span class="av" style="background:${s.col}">${s.who[0]}</span><span><b>${esc(s.who)}: ${esc(s.title)}</b><span>${esc(s.age)} · ${s.dev === 'mac' ? 'Mac' : s.dev === 'ipad' ? 'iPad' : 'iPhone'}</span></span></button>`).join('');
+  [['seg-mode', 'mode'], ['seg-dev', 'dev'], ['seg-net', 'net']].forEach(([id, k]) => document.querySelectorAll('#' + id + ' button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset[k] === (k === 'dev' ? S.device : S[k])))));
+  const s = sc();
+  document.getElementById('taskcard').innerHTML = `<div class="task ${S.done ? 'done' : ''}"><div class="eyebrow">${esc(s.who)}'s task · ${S.mode === 'after' ? 'Live Previews' : "Today's iCloud"}</div><div class="goal">${esc(s.goal)}</div>
+    ${S.done ? `<span class="pill ok" style="align-self:flex-start">Found in ${fmtT(S.done.time)}</span>` : `<span style="font-size:12px;color:var(--muted)">${esc(s.hint)}</span>`}</div>`;
+  paintMeters();
+  const R = results[S.scen] || {};
+  const mx = Math.max(1, ...['before', 'after'].map(k => R[k] ? R[k].time : 0)), md = Math.max(1, ...['before', 'after'].map(k => R[k] ? R[k].data : 0));
+  document.getElementById('cmp').innerHTML = ['before', 'after'].map(k => { const r = R[k]; const lbl = k === 'before' ? 'Today' : 'Previews'; const col = k === 'before' ? 'var(--bad)' : 'var(--ok)';
+    return r ? `<div class="row"><b>${lbl}</b><div class="bar"><i style="width:${r.time / mx * 100}%;background:${col}"></i></div><small>${fmtT(r.time)} · ${fmtMB(r.data)} downloaded · ${r.checked} files checked</small></div>`
+      : `<div class="row"><b>${lbl}</b><div class="bar"></div><small>${k === S.mode ? 'Finish the task to record a run.' : `Switch to ${k === 'before' ? "Today's iCloud" : 'Live Previews'} and run it.`}</small></div>`; }).join('');
+  document.getElementById('log').innerHTML = S.log.length ? S.log.map(l => `<div><time>${l.t}</time><span>${esc(l.text)}</span></div>`).join('') : '<div><time></time><span style="color:var(--muted)">Nothing yet. Open a file to start.</span></div>';
+  document.getElementById('hint').textContent = S.mode === 'before' ? "Today's iCloud: files that live only in iCloud show a blank icon, and opening one downloads the whole thing." : 'Live Previews: every file shows a real preview. Opening streams a light preview; originals download only when you ask.';
+}
+function paintMeters() {
+  const m = S.m, data = m.wifi + m.cell;
+  document.getElementById('meters').innerHTML = `
+    <div class="kv"><span>Time${m.wait ? ' (with download waits)' : ''}</span><b id="mtime">${fmtT(elapsed())}</b></div>
+    <div class="kv"><span>Files checked</span><b>${m.checked.size}</b></div>
+    <div class="kv"><span>Originals downloaded</span><b class="${m.originals ? 'hot' : ''}">${m.originals} · ${fmtMB(m.store)}</b></div>
+    <div class="kv"><span>Cellular data used</span><b class="${m.cell > 100 ? 'hot' : ''}">${fmtMB(m.cell)}</b></div>
+    <div class="kv"><span>Preview data streamed</span><b class="cool">${fmtMB(m.previewMB)}</b></div>`;
+}
+
+/* ================= paint ================= */
+let fitScale = 1;
+function paint() {
+  const keepScroll = document.getElementById('dbody') ? document.getElementById('dbody').scrollTop : 0;
+  const active = document.activeElement && document.activeElement.id && document.activeElement.id.startsWith('q-') ? document.activeElement.selectionStart : null;
+  const sc_ = document.getElementById('scaler');
+  sc_.innerHTML = deviceHTML(false);
+  const b = document.getElementById('dbody'); if (b) b.scrollTop = keepScroll;
+  if (active !== null) { const inp = document.getElementById('q-' + S.device); if (inp) { inp.focus(); try { inp.setSelectionRange(active, active); } catch (e) {} } }
+  fit(); paintRails(); hookPlayer();
+}
+function fit() {
+  const [w, h] = DIMS[S.device]; const box = document.getElementById('fit'); const avail = box.clientWidth || w;
+  fitScale = Math.min(1, avail / w); const s = document.getElementById('scaler');
+  s.style.width = w + 'px'; s.style.height = h + 'px'; s.style.transform = `scale(${fitScale})`; box.style.height = (h * fitScale) + 'px';
+}
+addEventListener('resize', () => { if (!document.getElementById('view-prototype').hidden) fit(); });
+
+/* ---------- player ---------- */
+function hookPlayer() {
+  cancelAnimationFrame(V.raf);
+  const cv = document.getElementById('player'); if (!cv) { V.playing = false; return; }
+  const f = FBY[S.ql]; const x = cv.getContext('2d');
+  const drawNow = () => { draw(x, 960, 540, f.spec, V.pt); const pi = document.getElementById('progi'); if (pi) pi.style.width = (V.pt * 100).toFixed(2) + '%'; const tt = document.getElementById('ptime'); if (tt) tt.textContent = fmtT(V.pt * f.dur) + ' / ' + fmtT(f.dur);
+    document.querySelectorAll('.strip button[data-act="frame"]').forEach(b => b.setAttribute('aria-current', String(+b.dataset.i === Math.min(NFR - 1, Math.floor(V.pt * NFR))))); };
+  drawNow();
+  const loop = ts => { if (!V.playing) return; const dt = V.lastTs ? (ts - V.lastTs) / 1000 : 0; V.lastTs = ts; V.pt += dt / f.dur * (RM ? 1 : 1);
+    if (V.pt >= 1) { V.pt = 1; V.playing = false; drawNow(); paintPlayBtn(); return; } drawNow(); V.raf = requestAnimationFrame(loop); };
+  if (V.playing) { V.lastTs = 0; V.raf = requestAnimationFrame(loop); }
+  V.redraw = drawNow; V.loop = loop;
+  const prog = document.getElementById('prog');
+  if (prog) {
+    prog.addEventListener('mousemove', e => { const r = prog.getBoundingClientRect(); const fr = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); prog.classList.add('hov'); const tip = document.getElementById('tip'); tip.style.left = (fr * 100) + '%'; document.getElementById('tipimg').src = FR[f.id][Math.min(NFR - 1, Math.floor(fr * NFR))]; document.getElementById('tipt').textContent = fmtT(fr * f.dur); });
+    prog.addEventListener('mouseleave', () => prog.classList.remove('hov'));
+  }
+}
+function paintPlayBtn() { const b = document.querySelector('.ctrls button[data-act="play"]'); if (b) { b.innerHTML = V.playing ? I.pause : I.play; b.setAttribute('aria-label', V.playing ? 'Pause' : 'Play'); } }
+
+/* ================= actions ================= */
+function openFile(id) {
+  const f = FBY[id]; S.sel = id; S.ql = id; S.qlPage = 0; V.pt = 0; V.playing = false;
+  if (f.f === sc().folder && !S.done) S.m.checked.add(id);
+  if (!isLocal(id) && S.mode === 'before') { startDownload(id, false); log('Opened ' + f.name + '. It must download first (' + fmtMB(f.size) + ').'); }
+  else if (!isLocal(id)) {
+    if (f.kind === 'video') { const blocked = S.net === 'cell' && !S.cellVideo && !S.streamOK.has(id); if (!blocked) { const mb = Math.round(f.dur / 60 * 6 * 10) / 10; S.m.previewMB += mb; if (S.net === 'cell') S.m.cell += mb; else S.m.wifi += mb; V.playing = true; log('Streamed a preview of ' + f.name + ' (' + fmtMB(mb) + '). Nothing saved.'); } else log('Opened ' + f.name + ' from preview frames. No data used.'); }
+    else { S.m.previewMB += .3; log('Opened a preview of ' + f.name + '. No download.'); }
+  } else { if (f.kind === 'video') V.playing = true; log('Opened ' + f.name + ' (on this device).'); }
+  paint();
+}
+function startDownload(id, user) {
+  const f = FBY[id]; S.dl = {id, got: 0, user, t0: performance.now()};
+  const animMs = Math.min(3200, Math.max(900, f.size / 1.2));
+  const realS = f.size / speed();
+  const tick = () => {
+    if (!S.dl || S.dl.id !== id) return;
+    const p = Math.min(1, (performance.now() - S.dl.t0) / animMs); S.dl.got = f.size * p;
+    const bar = document.getElementById('dlbar'), tx = document.getElementById('dltxt');
+    if (bar) bar.style.width = (p * 100).toFixed(1) + '%'; if (tx) tx.textContent = fmtMB(S.dl.got) + ' of ' + fmtMB(f.size) + ' · about ' + fmtT((1 - p) * realS) + ' left on ' + (S.net === 'wifi' ? 'Wi-Fi' : 'cellular');
+    if (p < 1) { requestAnimationFrame(tick); return; }
+    S.dl = null; S.local.add(id); S.m.originals++; S.m.store += f.size; if (S.net === 'cell') S.m.cell += f.size; else S.m.wifi += f.size;
+    S.m.wait += Math.max(0, realS - animMs / 1000);
+    log('Downloaded ' + f.name + ': ' + fmtMB(f.size) + ' in about ' + fmtT(realS) + ' (real-world estimate).');
+    if (S.ql === id && f.kind === 'video') V.playing = true;
+    if (user) toast('Downloaded ' + f.name);
+    paint();
+  };
+  requestAnimationFrame(tick);
+}
+function pick() {
+  const f = FBY[S.ql], s = sc();
+  const ok = f.id === s.target && (s.page === undefined || S.qlPage === s.page);
+  if (ok) {
+    const t = elapsed(); S.done = {at: Date.now(), time: t};
+    const data = S.m.wifi + S.m.cell;
+    results[S.scen] = results[S.scen] || {}; results[S.scen][S.mode] = {time: t, data: S.m.store, checked: S.m.checked.size};
+    log('Found it: ' + f.name + (s.page !== undefined ? ', ' + f.pages[S.qlPage].sheet : '') + '.');
+    toast('Found it in ' + fmtT(t) + ' · ' + fmtMB(S.m.store) + ' downloaded', 'ok');
+  } else {
+    let msg = (s.wrong && s.wrong[f.id]) || s.def;
+    if (f.id === s.target && s.page !== undefined) msg = 'Right set. Flip to sheet A-301.';
+    toast(msg, 'bad'); log('Not it: ' + f.name + '. ' + msg);
+  }
+  paint();
+}
+function setScen(id) { cancelAnimationFrame(V.raf); V = {playing: false, pt: 0}; const mode = S ? S.mode : 'after'; S = fresh(id); S.mode = mode; log('Started: ' + SBY[id].goal); paint(); }
+function restart(msg) { const keep = {scen: S.scen, mode: S.mode, device: S.device, net: S.net, view: S.view, cellVideo: S.cellVideo, askCell: S.askCell}; cancelAnimationFrame(V.raf); V = {playing: false, pt: 0}; S = fresh(keep.scen); Object.assign(S, keep); S.folder = sc().folder; log(msg || 'Started over.'); paint(); }
+
+document.addEventListener('click', e => {
+  const sb = e.target.closest('.scen'); if (sb) { setScen(sb.dataset.scen); return; }
+  const mb = e.target.closest('#seg-mode button'); if (mb) { if (S.mode !== mb.dataset.mode) { S.mode = mb.dataset.mode; restart(mb.dataset.mode === 'after' ? 'Switched to Live Previews. Task restarted.' : "Switched to today's iCloud. Task restarted."); } return; }
+  const db = e.target.closest('#seg-dev button'); if (db) { S.device = db.dataset.dev; if (S.device !== 'iphone' && !S.folder) S.folder = sc().folder; S.settings = false; paint(); return; }
+  const nb = e.target.closest('#seg-net button'); if (nb) { S.net = nb.dataset.net; log('Network: ' + (S.net === 'wifi' ? 'Wi-Fi' : 'cellular') + '.'); paint(); return; }
+  if (e.target.closest('#restart')) { restart(); return; }
+  const a = e.target.closest('[data-act]'); if (!a || !a.closest('#scaler')) return;
+  const act = a.dataset.act;
+  if (act === 'open') { if (S.ql) return; openFile(a.dataset.id); }
+  else if (act === 'folder') { S.folder = a.dataset.f; S.query = ''; S.sel = null; paint(); }
+  else if (act === 'up') { S.folder = null; S.query = ''; paint(); }
+  else if (act === 'view') { S.view = a.dataset.v; paint(); }
+  else if (act === 'clearq') { S.query = ''; paint(); }
+  else if (act === 'close') { if (S.dl && S.dl.id === S.ql && !S.dl.user) { S.dl = null; log('Cancelled the download.'); } cancelAnimationFrame(V.raf); V.playing = false; S.ql = null; paint(); }
+  else if (act === 'play') { if (V.pt >= 1) V.pt = 0; V.playing = !V.playing; paintPlayBtn(); if (V.playing) { V.lastTs = 0; V.raf = requestAnimationFrame(V.loop); } }
+  else if (act === 'seek') { const r = a.getBoundingClientRect(); V.pt = Math.min(.999, Math.max(0, (e.clientX - r.left) / r.width)); V.redraw && V.redraw(); }
+  else if (act === 'frame') { const i = +a.dataset.i; V.pt = (i + .5) / NFR; V.frameIdx = i; if (V.redraw) V.redraw(); else paint(); }
+  else if (act === 'page') { const f = FBY[S.ql]; S.qlPage = Math.min(f.pages.length - 1, Math.max(0, S.qlPage + +a.dataset.d)); paint(); }
+  else if (act === 'pg') { S.qlPage = +a.dataset.i; paint(); }
+  else if (act === 'stream') { const f = FBY[S.ql]; S.streamOK.add(f.id); const mb = Math.round(f.dur / 60 * 6 * 10) / 10; S.m.previewMB += mb; S.m.cell += mb; V.playing = true; log('Streamed a preview of ' + f.name + ' on cellular (' + fmtMB(mb) + ').'); paint(); }
+  else if (act === 'download') { const f = FBY[S.ql]; if (S.queued.has(f.id)) return; if (S.net === 'cell' && S.askCell) { S.sheet = {id: f.id}; paint(); } else { startDownload(f.id, true); log('Downloading the original of ' + f.name + '.'); paint(); } }
+  else if (act === 'queue') { S.queued.add(S.sheet.id); log('Queued ' + FBY[S.sheet.id].name + ' to download on Wi-Fi.'); toast('Will download on Wi-Fi'); S.sheet = null; paint(); }
+  else if (act === 'dlnow') { const id = S.sheet.id; S.sheet = null; startDownload(id, true); log('Downloading the original of ' + FBY[id].name + ' on cellular.'); paint(); }
+  else if (act === 'closesheet') { S.sheet = null; paint(); }
+  else if (act === 'pick') pick();
+  else if (act === 'share') { toast('Shared as an iCloud link. Nothing downloaded.'); log('Shared ' + FBY[S.ql || S.sel].name + ' as a link.'); paint(); }
+  else if (act === 'settings') { S.settings = true; paint(); }
+  else if (act === 'closeset') { S.settings = false; paint(); }
+  else if (act === 'tog') { if (S.mode !== 'after') return; S[a.dataset.k] = !S[a.dataset.k]; log((a.dataset.k === 'cellVideo' ? 'Stream video previews on cellular' : 'Ask before cellular downloads') + ': ' + (S[a.dataset.k] ? 'on' : 'off') + '.'); paint(); }
+});
+document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.act === 'query') { S.query = e.target.value; if (S.query.trim() && S.device === 'iphone' && !S.folder) {} if (S.query.trim().length >= 3) log('Searched “' + S.query.trim() + '”.'); S.log = S.log.filter((l, i, arr) => !(i > 0 && l.text.startsWith('Searched') && arr[0].text.startsWith('Searched'))); paint(); } });
+document.addEventListener('keydown', e => {
+  if (document.getElementById('view-prototype').hidden) return;
+  if (e.target.tagName === 'INPUT') { if (e.key === 'Escape') { S.query = ''; paint(); } return; }
+  if (S.ql && e.key === 'Escape') { document.querySelector('[data-act="close"]').click(); e.preventDefault(); }
+  else if (S.ql && FBY[S.ql].kind === 'pdf' && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { const f = FBY[S.ql]; S.qlPage = Math.min(f.pages.length - 1, Math.max(0, S.qlPage + (e.key === 'ArrowRight' ? 1 : -1))); paint(); e.preventDefault(); }
+  else if (!S.ql && e.key === ' ' && S.sel) { openFile(S.sel); e.preventDefault(); }
+  else if (S.settings && e.key === 'Escape') { S.settings = false; paint(); }
+});
+// hover scrub
+document.addEventListener('mousemove', e => {
+  const t = e.target.closest && e.target.closest('.tile[data-scrub]'); if (!t || S.ql) return;
+  const f = FBY[t.dataset.id]; const th = t.querySelector('.th'); const r = th.getBoundingClientRect();
+  const fr = Math.min(.999, Math.max(0, (e.clientX - r.left) / r.width)); const img = th.querySelector('img');
+  const arr = f.kind === 'video' ? FR[f.id] : PG[f.id]; const i = Math.floor(fr * arr.length);
+  if (img && img.dataset.i !== String(i)) { img.src = arr[i]; img.dataset.i = i; }
+  t.classList.add('scrubbing'); const bar = th.querySelector('.scrubline i'); if (bar) bar.style.width = ((i + 1) / arr.length * 100) + '%';
+  if (!t._leave) { t._leave = true; t.addEventListener('mouseleave', () => { t.classList.remove('scrubbing'); const im = th.querySelector('img'); if (im) { im.src = TH[f.id]; delete im.dataset.i; } t._leave = false; }, {once: true}); }
+});
+setInterval(() => { const el = document.getElementById('mtime'); if (el && !S.done) el.textContent = fmtT(elapsed()); }, 1000);
+
+/* ================= screens board ================= */
+function buildBoard() {
+  const keep = S, keepV = V; const frames = [];
+  const snap = (title, sub, setup) => { S = fresh(setup.scen); V = {playing: false, pt: .5}; setup(S, V); const [w, h] = DIMS[S.device]; const sc_ = Math.min(1, (S.device === 'iphone' ? 300 : 560) / w);
+    frames.push(`<div class="frame" data-dev="${S.device}"><div class="lbl"><b>${esc(title)}</b>${esc(sub)}</div><div class="shot" style="width:${w * sc_}px;height:${h * sc_}px"><div style="width:${w}px;height:${h}px;transform:scale(${sc_});transform-origin:top left">${deviceHTML(true)}</div></div></div>`); };
+  snap('1 · Today: a folder of guesses', 'Mac, Optimize Storage on. Eight takes, eight identical icons.', Object.assign(s => { s.mode = 'before'; }, {scen: 'daniel'}));
+  snap('2 · Live Previews: every file shows itself', 'The same folder, nothing downloaded. Real frames, durations and sizes.', Object.assign(s => { s.mode = 'after'; s.sel = 'h17'; }, {scen: 'daniel'}));
+  snap('3 · Streamed Quick Look', 'A 720p preview plays in a second. The 1.37 GB original stays in iCloud.', Object.assign((s, v) => { s.mode = 'after'; s.ql = 'h17'; v.pt = .45; v.playing = true; }, {scen: 'daniel'}));
+  snap('4 · Rosa sees her photos again', 'Scans in iCloud look like photos, not blank paper.', Object.assign(s => { s.mode = 'after'; s.sel = 's1'; }, {scen: 'rosa'}));
+  snap('5 · Flip a drawing set without opening it', 'Page strip and sheet numbers come with the preview.', Object.assign(s => { s.mode = 'after'; s.ql = 'k4'; s.qlPage = 5; }, {scen: 'ken'}));
+  snap('6 · Cellular: frames are free, video asks', 'Preview frames are already on the phone. Streaming shows its cost.', Object.assign((s, v) => { s.mode = 'after'; s.ql = 'p4'; v.frameIdx = 6; }, {scen: 'rafi'}));
+  snap('7 · Say the cost before a download', 'Size and data left this month, with Wi-Fi later as the default.', Object.assign(s => { s.mode = 'after'; s.ql = 'p4'; s.streamOK.add('p4'); s.sheet = {id: 'p4'}; }, {scen: 'rafi'}));
+  snap('8 · Search inside screenshots', '"mito" finds the slide by its text and flags the near miss.', Object.assign(s => { s.mode = 'after'; s.query = 'mito'; }, {scen: 'maya'}));
+  snap('9 · Previews settings', 'Coverage, encryption and cellular rules in one place.', Object.assign(s => { s.mode = 'after'; s.settings = true; s.folder = null; }, {scen: 'maya'}));
+  document.getElementById('frames').innerHTML = frames.join('');
+  S = keep; V = keepV;
+}
+
+/* ================= routing ================= */
+function route() {
+  const h = location.hash.replace('#', '') || 'prototype'; const scr = h === 'screens';
+  document.getElementById('view-prototype').hidden = scr; document.getElementById('view-screens').hidden = !scr;
+  document.getElementById('tab-prototype').setAttribute('aria-current', scr ? 'false' : 'page');
+  document.getElementById('tab-screens').setAttribute('aria-current', scr ? 'page' : 'false');
+  if (scr) { cancelAnimationFrame(V.raf); buildBoard(); } else paint();
+}
+const fontsReady = Promise.race([Promise.all([document.fonts.load('500 40px Caveat'), document.fonts.load('700 40px Caveat'), document.fonts.load('600 20px Inter'), document.fonts.load('700 20px Inter')]), new Promise(r => setTimeout(r, 1800))]).catch(() => {});
+fontsReady.then(() => { build(); S = fresh('daniel'); log('Started: ' + SBY.daniel.goal); addEventListener('hashchange', route); route(); });
+})();
+</script>
